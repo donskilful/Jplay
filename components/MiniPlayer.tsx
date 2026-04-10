@@ -2,18 +2,21 @@ import React, { useMemo } from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router, usePathname } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { usePlayerContext } from '../context/PlayerContext';
 import { useTheme } from '../context/ThemeContext';
 import { FONT, RADIUS } from '../constants/theme';
 import type { ThemeColors } from '../constants/theme';
 
-function makeStyles(colors: ThemeColors) {
+const TAB_BAR_HEIGHT = 49;
+
+function makeStyles(colors: ThemeColors, tabBarBottom: number) {
   return StyleSheet.create({
     wrapper: {
       position: 'absolute',
       left: 0,
       right: 0,
-      bottom: 60,
+      bottom: tabBarBottom + 8,
     },
     container: {
       marginHorizontal: 10,
@@ -78,7 +81,9 @@ export default function MiniPlayer(): React.JSX.Element | null {
     isShuffle, repeatMode, toggleShuffle, toggleRepeat,
   } = usePlayerContext();
   const { colors } = useTheme();
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const insets = useSafeAreaInsets();
+  const tabBarBottom = TAB_BAR_HEIGHT + insets.bottom;
+  const styles = useMemo(() => makeStyles(colors, tabBarBottom), [colors, tabBarBottom]);
 
   const pathname = usePathname();
   if (!currentSong || pathname === '/player') return null;

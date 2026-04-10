@@ -5,32 +5,24 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFonts } from 'expo-font';
 import { Outfit_400Regular, Outfit_600SemiBold, Outfit_700Bold } from '@expo-google-fonts/outfit';
 import * as SplashScreen from 'expo-splash-screen';
-import { ThemeProvider, useTheme } from '../context/ThemeContext';
+import { ThemeProvider } from '../context/ThemeContext';
 import { PlayerProvider } from '../context/PlayerContext';
 import MiniPlayer from '../components/MiniPlayer';
+import GlassTabBar from '../components/GlassTabBar';
+import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 
 SplashScreen.preventAutoHideAsync();
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
-interface TabIconProps { color: string; size: number }
+interface TabIconProps { color: string; size: number; focused: boolean }
+
+const renderTabBar = (props: BottomTabBarProps): React.JSX.Element => <GlassTabBar {...props} />;
 
 function TabsNavigator(): React.JSX.Element {
-  const { colors } = useTheme();
   return (
     <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarStyle: {
-          backgroundColor: colors.surface,
-          borderTopColor: colors.border,
-          borderTopWidth: 1,
-          height: 60,
-          paddingBottom: 8,
-        },
-        tabBarActiveTintColor: colors.accent,
-        tabBarInactiveTintColor: colors.textMuted,
-        tabBarLabelStyle: { fontSize: 10, fontWeight: '500' },
-      }}
+      tabBar={renderTabBar}
+      screenOptions={{ headerShown: false }}
     >
       <Tabs.Screen
         name="index"
@@ -45,8 +37,8 @@ function TabsNavigator(): React.JSX.Element {
         name="player"
         options={{
           title: 'Playing',
-          tabBarIcon: ({ color, size }: TabIconProps): React.JSX.Element => (
-            <Ionicons name={'musical-notes' as IoniconsName} size={size} color={color} />
+          tabBarIcon: ({ color, size, focused }: TabIconProps): React.JSX.Element => (
+            <Ionicons name={(focused ? 'musical-notes' : 'musical-notes-outline') as IoniconsName} size={size} color={color} />
           ),
         }}
       />
@@ -54,8 +46,8 @@ function TabsNavigator(): React.JSX.Element {
         name="favorites"
         options={{
           title: 'Favorites',
-          tabBarIcon: ({ color, size }: TabIconProps): React.JSX.Element => (
-            <Ionicons name={'heart' as IoniconsName} size={size} color={color} />
+          tabBarIcon: ({ color, size, focused }: TabIconProps): React.JSX.Element => (
+            <Ionicons name={(focused ? 'heart' : 'heart-outline') as IoniconsName} size={size} color={color} />
           ),
         }}
       />
@@ -63,8 +55,8 @@ function TabsNavigator(): React.JSX.Element {
         name="settings"
         options={{
           title: 'Settings',
-          tabBarIcon: ({ color, size }: TabIconProps): React.JSX.Element => (
-            <Ionicons name={'settings-outline' as IoniconsName} size={size} color={color} />
+          tabBarIcon: ({ color, size, focused }: TabIconProps): React.JSX.Element => (
+            <Ionicons name={(focused ? 'settings' : 'settings-outline') as IoniconsName} size={size} color={color} />
           ),
         }}
       />
