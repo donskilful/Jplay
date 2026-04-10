@@ -113,15 +113,13 @@ export default function HomeScreen(): React.JSX.Element {
   }, []);
 
   const playStreamed = useCallback(async (song: Song): Promise<void> => {
-    const existingIndex = songs.findIndex(s => s.id === song.id);
-    if (existingIndex >= 0) {
-      await play(song, existingIndex);
-    } else {
-      const newIndex = songs.length;
-      setSongs(prev => prev.some(s => s.id === song.id) ? prev : [...prev, song]);
-      await play(song, newIndex);
-    }
-  }, [songs, setSongs, play]);
+    // Add all trending songs to queue so next/prev works across the full list
+    const toAdd = trending.filter(t => !songs.some(s => s.id === t.id));
+    const updatedSongs = toAdd.length > 0 ? [...songs, ...toAdd] : songs;
+    if (toAdd.length > 0) setSongs(updatedSongs);
+    const index = updatedSongs.findIndex(s => s.id === song.id);
+    await play(song, index >= 0 ? index : 0);
+  }, [songs, setSongs, play, trending]);
 
   const artists = useMemo((): Artist[] => {
     const map = new Map<string, Artist>();

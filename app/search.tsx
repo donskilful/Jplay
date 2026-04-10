@@ -83,15 +83,14 @@ export default function SearchScreen(): React.JSX.Element {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const playStreamed = useCallback(async (song: Song): Promise<void> => {
-    const existingIndex = songs.findIndex(s => s.id === song.id);
-    if (existingIndex >= 0) {
-      await play(song, existingIndex);
-    } else {
-      const newIndex = songs.length;
-      setSongs(prev => prev.some(s => s.id === song.id) ? prev : [...prev, song]);
-      await play(song, newIndex);
-    }
-  }, [songs, setSongs, play]);
+    // Add all current search results to queue so next/prev navigates through them
+    const allResults = [...localResults, ...jamendoResults, ...archiveResults];
+    const toAdd = allResults.filter(r => !songs.some(s => s.id === r.id));
+    const updatedSongs = toAdd.length > 0 ? [...songs, ...toAdd] : songs;
+    if (toAdd.length > 0) setSongs(updatedSongs);
+    const index = updatedSongs.findIndex(s => s.id === song.id);
+    await play(song, index >= 0 ? index : 0);
+  }, [songs, setSongs, play, localResults, jamendoResults, archiveResults]);
 
   useEffect(() => {
     const q = query.trim();
