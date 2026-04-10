@@ -51,7 +51,7 @@ export default function LibraryScreen(): React.JSX.Element {
     {
       icon: 'heart' as IoniconsName,
       label: isFavorite(song.id) ? 'Remove from Favorites' : 'Add to Favorites',
-      onPress: () => toggleFavorite(song.id),
+      onPress: () => toggleFavorite(song),
     },
     {
       icon: 'play-circle' as IoniconsName,

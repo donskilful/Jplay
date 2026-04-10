@@ -31,18 +31,16 @@ function makeStyles(colors: ThemeColors) {
 }
 
 export default function FavoritesScreen(): React.JSX.Element {
-  const { songs, currentSong, isPlaying, play, isFavorite, toggleFavorite } = usePlayerContext();
+  const { favoriteSongs, currentSong, isPlaying, play, isFavorite, toggleFavorite } = usePlayerContext();
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [selectedSong, setSelectedSong] = useState<Song | null>(null);
-
-  const favoriteSongs = songs.filter(s => isFavorite(s.id));
 
   const buildOptions = (song: Song): { icon: IoniconsName; label: string; onPress: () => void; destructive?: boolean }[] => [
     {
       icon: 'heart' as IoniconsName,
       label: 'Remove from Favorites',
-      onPress: () => toggleFavorite(song.id),
+      onPress: () => toggleFavorite(song),
     },
     {
       icon: 'share-social' as IoniconsName,

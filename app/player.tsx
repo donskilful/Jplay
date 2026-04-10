@@ -317,7 +317,7 @@ export default function PlayerScreen(): React.JSX.Element {
             {/* Like */}
             <TouchableOpacity
               style={styles.actionBtn}
-              onPress={() => toggleFavorite(currentSong.id)}
+              onPress={() => toggleFavorite(currentSong)}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               accessibilityLabel={liked ? 'Unlike song' : 'Like song'}
             >
@@ -427,7 +427,7 @@ export default function PlayerScreen(): React.JSX.Element {
                 isActive={false}
                 isLiked={isFavorite(song.id)}
                 onPress={() => void play(song, currentIndex + 1 + i)}
-                onFavorite={() => toggleFavorite(song.id)}
+                onFavorite={() => toggleFavorite(song)}
                 onOptions={() => setShowOptions(true)}
               />
             ))}

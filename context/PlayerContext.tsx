@@ -5,6 +5,7 @@ import { useAudioPlayer } from '../hooks/useAudioPlayer';
 
 const STORAGE_KEYS = {
   favorites: '@jplay/favorites',
+  favoriteSongs: '@jplay/favoriteSongs',
   songs: '@jplay/songs',
   recentlyPlayed: '@jplay/recentlyPlayed',
 } as const;
@@ -36,6 +37,7 @@ interface PlayerProviderProps {
 export function PlayerProvider({ children }: PlayerProviderProps): React.JSX.Element {
   const [songs, setSongs] = useState<Song[]>([]);
   const [favorites, setFavorites] = useState<string[]>([]);
+  const [favoriteSongs, setFavoriteSongs] = useState<Song[]>([]);
   const [downloads, setDownloads] = useState<string[]>([]);
   const [recentlyPlayed, setRecentlyPlayed] = useState<Song[]>([]);
   const [hydrated, setHydrated] = useState(false);
@@ -43,13 +45,14 @@ export function PlayerProvider({ children }: PlayerProviderProps): React.JSX.Ele
   // Load persisted data on first mount
   useEffect(() => {
     void (async () => {
-      const [savedFavorites, savedSongs, savedRecent] = await Promise.all([
+      const [savedFavorites, savedFavSongs, savedSongs, savedRecent] = await Promise.all([
         load<string[]>(STORAGE_KEYS.favorites, []),
+        load<Song[]>(STORAGE_KEYS.favoriteSongs, []),
         load<Song[]>(STORAGE_KEYS.songs, []),
         load<Song[]>(STORAGE_KEYS.recentlyPlayed, []),
       ]);
       setFavorites(savedFavorites);
-      // Only restore local songs — streamed songs are fetched live
+      setFavoriteSongs(savedFavSongs);
       setSongs(savedSongs.filter(s => s.source === 'local' || s.source === undefined));
       setRecentlyPlayed(savedRecent);
       setHydrated(true);
@@ -61,6 +64,11 @@ export function PlayerProvider({ children }: PlayerProviderProps): React.JSX.Ele
     if (!hydrated) return;
     void save(STORAGE_KEYS.favorites, favorites);
   }, [favorites, hydrated]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    void save(STORAGE_KEYS.favoriteSongs, favoriteSongs);
+  }, [favoriteSongs, hydrated]);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -76,10 +84,16 @@ export function PlayerProvider({ children }: PlayerProviderProps): React.JSX.Ele
   const player = useAudioPlayer(songs);
   const { play: playerPlay } = player;
 
-  const toggleFavorite = useCallback((id: string): void => {
-    setFavorites(prev =>
-      prev.includes(id) ? prev.filter(fid => fid !== id) : [...prev, id]
-    );
+  const toggleFavorite = useCallback((song: Song): void => {
+    setFavorites(prev => {
+      if (prev.includes(song.id)) {
+        setFavoriteSongs(s => s.filter(fs => fs.id !== song.id));
+        return prev.filter(id => id !== song.id);
+      } else {
+        setFavoriteSongs(s => s.some(fs => fs.id === song.id) ? s : [...s, song]);
+        return [...prev, song.id];
+      }
+    });
   }, []);
 
   const isFavorite = useCallback((id: string): boolean => {
@@ -104,6 +118,7 @@ export function PlayerProvider({ children }: PlayerProviderProps): React.JSX.Ele
     setSongs,
     recentlyPlayed,
     favorites,
+    favoriteSongs,
     toggleFavorite,
     isFavorite,
     downloads,

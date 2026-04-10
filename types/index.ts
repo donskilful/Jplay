@@ -25,7 +25,8 @@ export interface PlayerContextValue extends PlaybackState {
   setSongs: React.Dispatch<React.SetStateAction<Song[]>>;
   recentlyPlayed: Song[];
   favorites: string[];
-  toggleFavorite: (id: string) => void;
+  favoriteSongs: Song[];
+  toggleFavorite: (song: Song) => void;
   isFavorite: (id: string) => boolean;
   downloads: string[];
   addDownload: (id: string) => void;
