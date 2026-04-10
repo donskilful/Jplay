@@ -16,7 +16,13 @@
       }
     },
     "android": {
-      "package": "com.jplay.app"
+      "package": "com.jplay.app",
+      "permissions": [
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.ACCESS_MEDIA_LOCATION"
+      ]
     },
     "plugins": [
       "expo-router",
@@ -41,6 +47,17 @@
       "typedRoutes": true
     },
     "scheme": "jplay",
-    "platforms": ["ios", "android"]
+    "platforms": [
+      "ios",
+      "android"
+    ],
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "30155666-a669-47ce-9f36-f63ee23385d2"
+      }
+    }
   }
 }
