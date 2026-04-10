@@ -12,8 +12,8 @@ import HorizontalScroller from '../components/HorizontalScroller';
 import { usePlayerContext } from '../context/PlayerContext';
 import { useTheme } from '../context/ThemeContext';
 import { useImportSongs } from '../hooks/useImportSongs';
-import { getDeezerCharts } from '../services/deezerAPI';
-import { getItunesCharts } from '../services/iTunesAPI';
+import { getFeaturedArchiveTracks } from '../services/archiveAPI';
+import { getFeaturedJamendo } from '../services/jamendoAPI';
 import type { Song } from '../types';
 import { FONT, RADIUS } from '../constants/theme';
 import type { ThemeColors } from '../constants/theme';
@@ -33,7 +33,7 @@ function makeStyles(colors: ThemeColors) {
     appName: {
       color: colors.textPrimary,
       fontSize: FONT.xxl,
-      fontFamily: 'PlayfairDisplay_700Bold',
+      fontFamily: 'Outfit_700Bold',
       letterSpacing: 0.5,
     },
     headerSub: { color: colors.textSecondary, fontSize: FONT.sm, marginTop: 2 },
@@ -57,7 +57,7 @@ function makeStyles(colors: ThemeColors) {
       flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
       paddingHorizontal: 20, marginBottom: 14,
     },
-    sectionTitle: { color: colors.textPrimary, fontSize: FONT.lg, fontFamily: 'PlayfairDisplay_700Bold' },
+    sectionTitle: { color: colors.textPrimary, fontSize: FONT.lg, fontFamily: 'Outfit_700Bold' },
     viewAll: { color: colors.accent, fontSize: FONT.sm, fontWeight: '500' },
     horizontalList: { paddingHorizontal: 20 },
 
@@ -71,7 +71,7 @@ function makeStyles(colors: ThemeColors) {
       backgroundColor: colors.accentDim, alignItems: 'center', justifyContent: 'center',
     },
     libraryBannerText: { flex: 1 },
-    libraryBannerTitle: { color: colors.textPrimary, fontSize: FONT.md, fontFamily: 'PlayfairDisplay_700Bold' },
+    libraryBannerTitle: { color: colors.textPrimary, fontSize: FONT.md, fontFamily: 'Outfit_700Bold' },
     libraryBannerSub: { color: colors.textSecondary, fontSize: FONT.sm, marginTop: 2 },
     emptyHint: { color: colors.textMuted, fontSize: FONT.sm, marginHorizontal: 20, fontStyle: 'italic' },
   });
@@ -96,19 +96,12 @@ export default function HomeScreen(): React.JSX.Element {
     abortRef.current = new AbortController();
     void (async () => {
       try {
-        const [deezer, itunes] = await Promise.all([
-          getDeezerCharts(12, abortRef.current?.signal),
-          getItunesCharts(12, abortRef.current?.signal),
+        const [jamendo, archive] = await Promise.all([
+          getFeaturedJamendo(12, abortRef.current?.signal),
+          getFeaturedArchiveTracks(12, abortRef.current?.signal),
         ]);
         if (!abortRef.current?.signal.aborted) {
-          // Interleave: deezer[0], itunes[0], deezer[1], itunes[1], ...
-          const mixed: Song[] = [];
-          const len = Math.max(deezer.length, itunes.length);
-          for (let i = 0; i < len; i++) {
-            if (deezer[i]) mixed.push(deezer[i]);
-            if (itunes[i]) mixed.push(itunes[i]);
-          }
-          setTrending(mixed);
+          setTrending([...jamendo, ...archive]);
         }
       } catch {
         // Network unavailable

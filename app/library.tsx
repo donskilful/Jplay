@@ -24,7 +24,7 @@ function makeStyles(colors: ThemeColors) {
     },
     backBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
     headerText: { flex: 1 },
-    title: { color: colors.textPrimary, fontSize: FONT.xxl, fontFamily: 'PlayfairDisplay_700Bold' },
+    title: { color: colors.textPrimary, fontSize: FONT.xxl, fontFamily: 'Outfit_700Bold' },
     subtitle: { color: colors.textSecondary, fontSize: FONT.sm, marginTop: 4 },
     importBtn: {
       flexDirection: 'row', alignItems: 'center', gap: 5,

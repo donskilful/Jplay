@@ -1,11 +1,13 @@
 import React, { useEffect } from 'react';
+import { View } from 'react-native';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useFonts } from 'expo-font';
-import { PlayfairDisplay_700Bold } from '@expo-google-fonts/playfair-display';
+import { Outfit_400Regular, Outfit_600SemiBold, Outfit_700Bold } from '@expo-google-fonts/outfit';
 import * as SplashScreen from 'expo-splash-screen';
 import { ThemeProvider, useTheme } from '../context/ThemeContext';
 import { PlayerProvider } from '../context/PlayerContext';
+import MiniPlayer from '../components/MiniPlayer';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -73,7 +75,7 @@ function TabsNavigator(): React.JSX.Element {
 }
 
 export default function RootLayout(): React.JSX.Element | null {
-  const [fontsLoaded, fontError] = useFonts({ PlayfairDisplay_700Bold });
+  const [fontsLoaded, fontError] = useFonts({ Outfit_400Regular, Outfit_600SemiBold, Outfit_700Bold });
 
   useEffect(() => {
     // Show app whether fonts loaded successfully or failed — never hang on white screen
@@ -85,7 +87,10 @@ export default function RootLayout(): React.JSX.Element | null {
   return (
     <ThemeProvider>
       <PlayerProvider>
-        <TabsNavigator />
+        <View style={{ flex: 1 }}>
+          <TabsNavigator />
+          <MiniPlayer />
+        </View>
       </PlayerProvider>
     </ThemeProvider>
   );

@@ -55,14 +55,9 @@ export default function SongCardHorizontal({ song, isActive, isPlaying, onPress 
             <Ionicons name={isPlaying ? 'pause-circle' : 'play-circle'} size={32} color={colors.accent} />
           </View>
         )}
-        {song.source === 'deezer' && (
-          <View style={[styles.badge, styles.badgePreview]}>
-            <Text style={styles.badgeText}>DEEZER</Text>
-          </View>
-        )}
-        {song.source === 'itunes' && (
-          <View style={[styles.badge, styles.badgePreview]}>
-            <Text style={styles.badgeText}>ITUNES</Text>
+        {(song.source === 'archive' || song.source === 'jamendo') && (
+          <View style={[styles.badge, styles.badgeFull]}>
+            <Text style={styles.badgeText}>FULL</Text>
           </View>
         )}
       </View>

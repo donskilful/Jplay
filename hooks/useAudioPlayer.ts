@@ -10,16 +10,31 @@ export interface AudioPlayerReturn extends PlaybackState {
   playNext: () => Promise<void>;
   playPrev: () => Promise<void>;
   seekTo: (positionMillis: number) => Promise<void>;
+  isShuffle: boolean;
+  repeatMode: 'off' | 'all' | 'one';
+  toggleShuffle: () => void;
+  toggleRepeat: () => void;
 }
 
 export function useAudioPlayer(songs: Song[]): AudioPlayerReturn {
   const soundRef = useRef<Audio.Sound | null>(null);
-  // Use a ref for currentIndex inside callbacks to avoid stale closures
   const currentIndexRef = useRef<number>(0);
   const songsRef = useRef<Song[]>(songs);
   songsRef.current = songs;
 
   const [currentIndex, setCurrentIndex] = useState<number>(0);
+  const [isShuffle, setIsShuffle] = useState(false);
+  const [repeatMode, setRepeatMode] = useState<'off' | 'all' | 'one'>('off');
+  const isShuffleRef = useRef(false);
+  const repeatModeRef = useRef<'off' | 'all' | 'one'>('off');
+  isShuffleRef.current = isShuffle;
+  repeatModeRef.current = repeatMode;
+
+  const toggleShuffle = useCallback(() => setIsShuffle(prev => !prev), []);
+  const toggleRepeat = useCallback(() => {
+    setRepeatMode(prev => prev === 'off' ? 'all' : prev === 'all' ? 'one' : 'off');
+  }, []);
+
   const [state, setState] = useState<PlaybackState>({
     currentSong: null,
     currentIndex: 0,
@@ -95,7 +110,22 @@ export function useAudioPlayer(songs: Song[]): AudioPlayerReturn {
   const playNext = useCallback(async (): Promise<void> => {
     const list = songsRef.current;
     if (list.length === 0) return;
-    const nextIndex = (currentIndexRef.current + 1) % list.length;
+    // Repeat one: always replay current song
+    if (repeatModeRef.current === 'one') {
+      const current = list[currentIndexRef.current];
+      if (current) { await loadSong(current, currentIndexRef.current); return; }
+    }
+    // Shuffle: pick random (not current)
+    let nextIndex: number;
+    if (isShuffleRef.current && list.length > 1) {
+      do { nextIndex = Math.floor(Math.random() * list.length); }
+      while (nextIndex === currentIndexRef.current);
+    } else {
+      nextIndex = (currentIndexRef.current + 1) % list.length;
+    }
+    // Repeat all: wraps around naturally via % (already handled above)
+    // Repeat off: stop at end of list
+    if (repeatModeRef.current === 'off' && nextIndex === 0 && !isShuffleRef.current) return;
     const nextSong = list[nextIndex];
     if (!nextSong) return;
     await loadSong(nextSong, nextIndex);
@@ -104,7 +134,18 @@ export function useAudioPlayer(songs: Song[]): AudioPlayerReturn {
   const playPrev = useCallback(async (): Promise<void> => {
     const list = songsRef.current;
     if (list.length === 0) return;
-    const prevIndex = (currentIndexRef.current - 1 + list.length) % list.length;
+    // Repeat one: replay current song
+    if (repeatModeRef.current === 'one') {
+      const current = list[currentIndexRef.current];
+      if (current) { await loadSong(current, currentIndexRef.current); return; }
+    }
+    let prevIndex: number;
+    if (isShuffleRef.current && list.length > 1) {
+      do { prevIndex = Math.floor(Math.random() * list.length); }
+      while (prevIndex === currentIndexRef.current);
+    } else {
+      prevIndex = (currentIndexRef.current - 1 + list.length) % list.length;
+    }
     const prevSong = list[prevIndex];
     if (!prevSong) return;
     await loadSong(prevSong, prevIndex);
@@ -160,5 +201,9 @@ export function useAudioPlayer(songs: Song[]): AudioPlayerReturn {
     playNext,
     playPrev,
     seekTo,
+    isShuffle,
+    repeatMode,
+    toggleShuffle,
+    toggleRepeat,
   };
 }

@@ -91,11 +91,8 @@ export default function SongCard({
       <View style={styles.info}>
         <View style={styles.titleRow}>
           <Text style={[styles.title, isActive && styles.activeTitle]} numberOfLines={1}>{song.title}</Text>
-          {song.source === 'deezer' && (
-            <View style={styles.badgePreview}><Text style={styles.badgeTextPreview}>DEEZER</Text></View>
-          )}
-          {song.source === 'itunes' && (
-            <View style={styles.badgePreview}><Text style={styles.badgeTextPreview}>ITUNES</Text></View>
+          {(song.source === 'archive' || song.source === 'jamendo') && (
+            <View style={styles.badgeFull}><Text style={styles.badgeTextFull}>FULL</Text></View>
           )}
         </View>
         <Text style={styles.artist} numberOfLines={1}>{song.artist}</Text>

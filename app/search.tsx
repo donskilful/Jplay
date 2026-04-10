@@ -10,8 +10,8 @@ import SongCard from '../components/SongCard';
 import OptionsModal from '../components/OptionsModal';
 import { usePlayerContext } from '../context/PlayerContext';
 import { useTheme } from '../context/ThemeContext';
-import { searchDeezer } from '../services/deezerAPI';
-import { searchItunes } from '../services/iTunesAPI';
+import { searchArchive } from '../services/archiveAPI';
+import { searchJamendo } from '../services/jamendoAPI';
 import type { Song } from '../types';
 import { FONT, RADIUS } from '../constants/theme';
 import type { ThemeColors } from '../constants/theme';
@@ -33,7 +33,7 @@ function makeStyles(colors: ThemeColors) {
       paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8, gap: 8,
     },
     backBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
-    title: { color: colors.textPrimary, fontSize: FONT.xl, fontFamily: 'PlayfairDisplay_700Bold' },
+    title: { color: colors.textPrimary, fontSize: FONT.xl, fontFamily: 'Outfit_700Bold' },
     inputWrapper: {
       flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface,
       borderRadius: RADIUS.md, marginHorizontal: 16, marginBottom: 16,
@@ -75,7 +75,7 @@ export default function SearchScreen(): React.JSX.Element {
   const [query, setQuery] = useState('');
   const [localResults, setLocalResults] = useState<Song[]>([]);
   const [jamendoResults, setJamendoResults] = useState<Song[]>([]);
-  const [itunesResults, setItunesResults] = useState<Song[]>([]);
+  const [archiveResults, setArchiveResults] = useState<Song[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [selectedSong, setSelectedSong] = useState<Song | null>(null);
 
@@ -100,7 +100,7 @@ export default function SearchScreen(): React.JSX.Element {
     if (!q) {
       setLocalResults([]);
       setJamendoResults([]);
-      setItunesResults([]);
+      setArchiveResults([]);
       setIsSearching(false);
       return;
     }
@@ -126,13 +126,13 @@ export default function SearchScreen(): React.JSX.Element {
 
       void (async () => {
         try {
-          const [deezer, itunes] = await Promise.all([
-            searchDeezer(q, 10, controller.signal),
-            searchItunes(q, 10, controller.signal),
+          const [jamendo, archive] = await Promise.all([
+            searchJamendo(q, 10, controller.signal),
+            searchArchive(q, 10, controller.signal),
           ]);
           if (!controller.signal.aborted) {
-            setJamendoResults(deezer);
-            setItunesResults(itunes);
+            setJamendoResults(jamendo);
+            setArchiveResults(archive);
           }
         } catch {
           // AbortError or network error — ignore
@@ -154,13 +154,13 @@ export default function SearchScreen(): React.JSX.Element {
       result.push({ title: 'In Your Library', subtitle: `${localResults.length} found`, data: localResults });
     }
     if (jamendoResults.length > 0) {
-      result.push({ title: 'Deezer', subtitle: '30-sec previews', data: jamendoResults });
+      result.push({ title: 'Jamendo', subtitle: 'Full tracks · Creative Commons', data: jamendoResults });
     }
-    if (itunesResults.length > 0) {
-      result.push({ title: 'iTunes', subtitle: '30-sec previews', data: itunesResults });
+    if (archiveResults.length > 0) {
+      result.push({ title: 'Free Music Archive', subtitle: 'Full tracks · Public domain', data: archiveResults });
     }
     return result;
-  }, [localResults, jamendoResults, itunesResults]);
+  }, [localResults, jamendoResults, archiveResults]);
 
   const hasResults = sections.length > 0;
   const isTyping = query.trim().length > 0;

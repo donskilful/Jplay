@@ -12,7 +12,7 @@ function makeStyles(colors: ThemeColors) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.bg },
     header: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12 },
-    title: { color: colors.textPrimary, fontSize: FONT.xxl, fontFamily: 'PlayfairDisplay_700Bold' },
+    title: { color: colors.textPrimary, fontSize: FONT.xxl, fontFamily: 'Outfit_700Bold' },
     section: { marginBottom: 24, paddingHorizontal: 16 },
     sectionLabel: {
       color: colors.textMuted, fontSize: FONT.xs, fontWeight: '700',
@@ -37,7 +37,7 @@ function makeStyles(colors: ThemeColors) {
       paddingHorizontal: 20, paddingTop: 20, paddingBottom: 16,
       borderBottomWidth: 1, borderBottomColor: colors.border,
     },
-    aboutTitle: { color: colors.textPrimary, fontSize: FONT.xl, fontFamily: 'PlayfairDisplay_700Bold' },
+    aboutTitle: { color: colors.textPrimary, fontSize: FONT.xl, fontFamily: 'Outfit_700Bold' },
     aboutClose: {
       width: 36, height: 36, borderRadius: RADIUS.full,
       backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center',
@@ -45,7 +45,7 @@ function makeStyles(colors: ThemeColors) {
     aboutScroll: { padding: 20 },
     aboutAppName: {
       color: colors.accent, fontSize: FONT.xxl,
-      fontFamily: 'PlayfairDisplay_700Bold', marginBottom: 4,
+      fontFamily: 'Outfit_700Bold', marginBottom: 4,
     },
     aboutVersion: { color: colors.textSecondary, fontSize: FONT.sm, marginBottom: 20 },
     aboutBody: { color: colors.textSecondary, fontSize: FONT.md, lineHeight: 24 },

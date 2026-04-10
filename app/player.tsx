@@ -106,6 +106,7 @@ export default function PlayerScreen(): React.JSX.Element {
   const { colors } = useTheme();
   const {
     songs,
+    setSongs,
     currentSong,
     currentIndex,
     isPlaying,
@@ -121,12 +122,14 @@ export default function PlayerScreen(): React.JSX.Element {
     isFavorite,
     addDownload,
     isDownloaded,
+    isShuffle,
+    repeatMode,
+    toggleShuffle,
+    toggleRepeat,
   } = usePlayerContext();
 
   const styles = React.useMemo(() => makeStyles(colors, colors.accent), [colors]);
 
-  const [isShuffle, setIsShuffle] = useState(false);
-  const [isRepeat, setIsRepeat] = useState(false);
   const [showQueue, setShowQueue] = useState(false);
   const [showOptions, setShowOptions] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -150,25 +153,37 @@ export default function PlayerScreen(): React.JSX.Element {
 
     setIsDownloading(true);
     try {
-      const filename = `${currentSong.id}_${currentSong.title.replace(/\s/g, '_')}.mp3`;
-      const dest = `${FileSystem.documentDirectory ?? ''}${filename}`;
+      const dir = `${FileSystem.documentDirectory ?? ''}jplay_songs/`;
+      await FileSystem.makeDirectoryAsync(dir, { intermediates: true });
 
-      const download = FileSystem.createDownloadResumable(
-        currentSong.uri,
-        dest,
-        {},
-        (progress) => {
-          const pct = Math.round(
-            (progress.totalBytesWritten / progress.totalBytesExpectedToWrite) * 100
-          );
-          // Progress is tracked — could be wired to a progress bar
-          void pct;
-        }
+      const safeTitle = currentSong.title.replace(/[^a-zA-Z0-9]/g, '_');
+      const filename = `${currentSong.id}_${safeTitle}.mp3`;
+      const dest = `${dir}${filename}`;
+
+      // Check if already downloaded on disk
+      const info = await FileSystem.getInfoAsync(dest);
+      const localUri = info.exists ? dest : await (async () => {
+        const dl = FileSystem.createDownloadResumable(currentSong.uri, dest);
+        const result = await dl.downloadAsync();
+        return result?.uri ?? dest;
+      })();
+
+      // Update the song in the library to use the local file URI
+      setSongs(prev => prev.map(s =>
+        s.id === currentSong.id
+          ? { ...s, uri: localUri, source: 'local' as const }
+          : s
+      ));
+
+      // Also add any streamed song that wasn't in library yet
+      setSongs(prev =>
+        prev.some(s => s.id === currentSong.id)
+          ? prev
+          : [...prev, { ...currentSong, uri: localUri, source: 'local' as const }]
       );
 
-      await download.downloadAsync();
       addDownload(currentSong.id);
-      Alert.alert('Downloaded', `"${currentSong.title}" saved to your library.`);
+      Alert.alert('Saved to Library', `"${currentSong.title}" is now in your library and plays offline.`);
     } catch {
       Alert.alert('Download Failed', 'Could not download the track. Please try again.');
     } finally {
@@ -337,16 +352,19 @@ export default function PlayerScreen(): React.JSX.Element {
         {/* ── Controls ── */}
         <View style={styles.controls}>
           <TouchableOpacity
-            onPress={() => setIsRepeat(prev => !prev)}
+            onPress={toggleRepeat}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            accessibilityLabel={isRepeat ? 'Disable repeat' : 'Enable repeat'}
+            accessibilityLabel={`Repeat: ${repeatMode}`}
           >
             <Ionicons
               name={'repeat' as IoniconsName}
               size={22}
-              color={isRepeat ? colors.accent : colors.textSecondary}
+              color={repeatMode !== 'off' ? colors.accent : colors.textSecondary}
             />
-            {isRepeat && <View style={styles.activeDot} />}
+            {repeatMode === 'one' && (
+              <Text style={{ color: colors.accent, fontSize: 9, fontWeight: '800', textAlign: 'center', marginTop: 1 }}>1</Text>
+            )}
+            {repeatMode === 'all' && <View style={styles.activeDot} />}
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -379,7 +397,7 @@ export default function PlayerScreen(): React.JSX.Element {
           </TouchableOpacity>
 
           <TouchableOpacity
-            onPress={() => setIsShuffle(prev => !prev)}
+            onPress={toggleShuffle}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             accessibilityLabel={isShuffle ? 'Disable shuffle' : 'Enable shuffle'}
           >

@@ -17,7 +17,7 @@ function makeStyles(colors: ThemeColors) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.bg },
     header: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12 },
-    title: { color: colors.textPrimary, fontSize: FONT.xxl, fontFamily: 'PlayfairDisplay_700Bold' },
+    title: { color: colors.textPrimary, fontSize: FONT.xxl, fontFamily: 'Outfit_700Bold' },
     subtitle: { color: colors.textSecondary, fontSize: FONT.sm, marginTop: 4 },
     list: { paddingBottom: 100, paddingTop: 8 },
     empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, padding: 32 },

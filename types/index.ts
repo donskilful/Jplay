@@ -8,7 +8,7 @@ export interface Song {
   duration?: number;
   artwork?: string;
   /** Where this song came from */
-  source?: 'local' | 'itunes' | 'deezer';
+  source?: 'local' | 'archive' | 'jamendo';
 }
 
 export interface PlaybackState {
@@ -36,4 +36,8 @@ export interface PlayerContextValue extends PlaybackState {
   playNext: () => Promise<void>;
   playPrev: () => Promise<void>;
   seekTo: (positionMillis: number) => Promise<void>;
+  isShuffle: boolean;
+  repeatMode: 'off' | 'all' | 'one';
+  toggleShuffle: () => void;
+  toggleRepeat: () => void;
 }
