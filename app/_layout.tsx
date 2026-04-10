@@ -1,35 +1,60 @@
 import React, { useEffect } from 'react';
-import { View } from 'react-native';
+import { View, StyleSheet, Platform } from 'react-native';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
 import { useFonts } from 'expo-font';
 import { Outfit_400Regular, Outfit_600SemiBold, Outfit_700Bold } from '@expo-google-fonts/outfit';
 import * as SplashScreen from 'expo-splash-screen';
-import { ThemeProvider } from '../context/ThemeContext';
+import { ThemeProvider, useTheme } from '../context/ThemeContext';
 import { PlayerProvider } from '../context/PlayerContext';
 import MiniPlayer from '../components/MiniPlayer';
-import GlassTabBar from '../components/GlassTabBar';
-import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 
 SplashScreen.preventAutoHideAsync();
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 interface TabIconProps { color: string; size: number; focused: boolean }
 
-const renderTabBar = (props: BottomTabBarProps): React.JSX.Element => <GlassTabBar {...props} />;
+function GlassBackground(): React.JSX.Element {
+  const { isDark } = useTheme();
+  if (Platform.OS !== 'ios') {
+    // Android: solid fallback
+    return <View style={[StyleSheet.absoluteFill, { backgroundColor: isDark ? '#111' : '#f2f2f2' }]} />;
+  }
+  return (
+    <BlurView
+      tint={isDark ? 'systemChromeMaterialDark' : 'systemChromeMaterialLight'}
+      intensity={80}
+      style={StyleSheet.absoluteFill}
+    />
+  );
+}
 
 function TabsNavigator(): React.JSX.Element {
+  const { colors, isDark } = useTheme();
   return (
     <Tabs
-      tabBar={renderTabBar}
-      screenOptions={{ headerShown: false }}
+      screenOptions={{
+        headerShown: false,
+        tabBarStyle: {
+          position: 'absolute',
+          backgroundColor: 'transparent',
+          borderTopColor: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)',
+          borderTopWidth: StyleSheet.hairlineWidth,
+          elevation: 0,
+        },
+        tabBarBackground: () => <GlassBackground />,
+        tabBarActiveTintColor: colors.accent,
+        tabBarInactiveTintColor: isDark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.35)',
+        tabBarLabelStyle: { fontSize: 10, fontWeight: '500' },
+      }}
     >
       <Tabs.Screen
         name="index"
         options={{
           title: 'Home',
-          tabBarIcon: ({ color, size }: TabIconProps): React.JSX.Element => (
-            <Ionicons name={'home' as IoniconsName} size={size} color={color} />
+          tabBarIcon: ({ color, size, focused }: TabIconProps): React.JSX.Element => (
+            <Ionicons name={(focused ? 'home' : 'home-outline') as IoniconsName} size={size} color={color} />
           ),
         }}
       />
@@ -70,7 +95,6 @@ export default function RootLayout(): React.JSX.Element | null {
   const [fontsLoaded, fontError] = useFonts({ Outfit_400Regular, Outfit_600SemiBold, Outfit_700Bold });
 
   useEffect(() => {
-    // Show app whether fonts loaded successfully or failed — never hang on white screen
     if (fontsLoaded || fontError) void SplashScreen.hideAsync();
   }, [fontsLoaded, fontError]);
 
@@ -87,4 +111,3 @@ export default function RootLayout(): React.JSX.Element | null {
     </ThemeProvider>
   );
 }
-
