@@ -134,6 +134,16 @@ function PersistentYouTubePlayer(): React.JSX.Element | null {
     }
   }, [currentSong?.youtubeVideoId]);
 
+  // If UI requests play, cancel any pending debounced pause commit from a
+  // transient YouTube "paused" event so controls don't desync.
+  useEffect(() => {
+    if (!ytPlaying) return;
+    if (pauseDebounceRef.current) {
+      clearTimeout(pauseDebounceRef.current);
+      pauseDebounceRef.current = null;
+    }
+  }, [ytPlaying]);
+
   // Poll position/duration every second while playing
   useEffect(() => {
     if (!ytPlaying || !ytReady) return;
@@ -154,17 +164,20 @@ function PersistentYouTubePlayer(): React.JSX.Element | null {
 
   const isOnPlayer = pathname === '/player';
   const showVideo = isOnPlayer && !audioOnly;
+  const showAudioOnlyOnPlayer = isOnPlayer && audioOnly;
 
-  // When showing: overlay exactly over the player screen's video placeholder.
-  // When hidden: keep an off-screen but valid-size viewport so iOS/WebKit
-  // doesn't aggressively suspend the YouTube iframe.
-  const videoStyle = showVideo
+  // When showing video: overlay exactly over the player screen placeholder.
+  // When in audio-only on player: keep same size/position but nearly invisible
+  // so iOS still treats it as an active player and autoplay remains reliable.
+  // When fully hidden (other tabs): keep off-screen valid-size viewport.
+  const videoStyle = (showVideo || showAudioOnlyOnPlayer)
     ? {
         top: insets.top + PLAYER_HEADER_H,
         left: 32,
         width: VIDEO_W,
         height: VIDEO_H,
         borderRadius: 12,
+        opacity: showAudioOnlyOnPlayer ? 0.02 : 1,
         zIndex: 50,
       }
     : {
@@ -190,9 +203,9 @@ function PersistentYouTubePlayer(): React.JSX.Element | null {
           key={currentSong.youtubeVideoId}
           ref={ytRef}
           videoId={currentSong.youtubeVideoId}
-          height={showVideo ? VIDEO_H : 1}
-          width={showVideo ? VIDEO_W : 1}
-          play={ytReady ? ytPlaying : false}
+          height={showVideo || showAudioOnlyOnPlayer ? VIDEO_H : 1}
+          width={showVideo || showAudioOnlyOnPlayer ? VIDEO_W : 1}
+          play={ytPlaying}
           forceAndroidAutoplay
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           initialPlayerParams={{ autoplay: 1, controls: 1, rel: 0 } as any}

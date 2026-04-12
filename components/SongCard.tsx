@@ -91,9 +91,6 @@ export default function SongCard({
       <View style={styles.info}>
         <View style={styles.titleRow}>
           <Text style={[styles.title, isActive && styles.activeTitle]} numberOfLines={1}>{song.title}</Text>
-          {(song.source === 'archive' || song.source === 'jamendo') && (
-            <View style={styles.badgeFull}><Text style={styles.badgeTextFull}>FULL</Text></View>
-          )}
         </View>
         <Text style={styles.artist} numberOfLines={1}>{song.artist}</Text>
         <Text style={styles.meta} numberOfLines={1}>{song.album} · {song.genre}</Text>

@@ -232,7 +232,7 @@ export default function SearchScreen(): React.JSX.Element {
           <Ionicons name="search" size={48} color={colors.textMuted} />
           <Text style={styles.emptyTitle}>Search everything</Text>
           <Text style={styles.emptySubtitle}>
-            Search your library, YouTube, Jamendo, and Free Music Archive all at once
+            Search your library and YouTube all at once
           </Text>
         </View>
       ) : !hasResults && !isSearching ? (

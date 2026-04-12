@@ -115,6 +115,9 @@ export default function HomeScreen(): React.JSX.Element {
     if (toAdd.length > 0) setSongs(updatedSongs);
     const index = updatedSongs.findIndex(s => s.id === song.id);
     await play(song, index >= 0 ? index : 0);
+    if (song.source === 'youtube') {
+      router.push('/player');
+    }
   }, [songs, setSongs, play, trending]);
 
   const artists = useMemo((): Artist[] => {

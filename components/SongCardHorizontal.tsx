@@ -55,11 +55,6 @@ export default function SongCardHorizontal({ song, isActive, isPlaying, onPress 
             <Ionicons name={isPlaying ? 'pause-circle' : 'play-circle'} size={32} color={colors.accent} />
           </View>
         )}
-        {(song.source === 'archive' || song.source === 'jamendo') && (
-          <View style={[styles.badge, styles.badgeFull]}>
-            <Text style={styles.badgeText}>FULL</Text>
-          </View>
-        )}
       </View>
       <Text style={[styles.title, isActive && styles.activeTitle]} numberOfLines={1}>{song.title}</Text>
       <Text style={styles.artist} numberOfLines={1}>{song.artist}</Text>

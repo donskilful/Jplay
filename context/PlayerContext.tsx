@@ -94,7 +94,8 @@ export function PlayerProvider({ children }: PlayerProviderProps): React.JSX.Ele
     const song = player.currentSong;
     if (!song) return;
     setYtPlaying(song.source === 'youtube');
-    setAudioOnly(true); // each new song starts in audio-only; user opts into video
+    // Default to audio-only on each new YouTube track; user can opt into video.
+    setAudioOnly(true);
     setYtPosition(0);
     setYtDuration(0);
   // eslint-disable-next-line react-hooks/exhaustive-deps

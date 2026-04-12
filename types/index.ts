@@ -8,7 +8,7 @@ export interface Song {
   duration?: number;
   artwork?: string;
   /** Where this song came from */
-  source?: 'local' | 'archive' | 'jamendo' | 'youtube' | 'deezer' | 'itunes';
+  source?: 'local' | 'youtube';
   /** YouTube video ID — only set when source === 'youtube' */
   youtubeVideoId?: string;
 }
