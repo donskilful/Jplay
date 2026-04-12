@@ -8,7 +8,9 @@ export interface Song {
   duration?: number;
   artwork?: string;
   /** Where this song came from */
-  source?: 'local' | 'archive' | 'jamendo';
+  source?: 'local' | 'archive' | 'jamendo' | 'youtube' | 'deezer' | 'itunes';
+  /** YouTube video ID — only set when source === 'youtube' */
+  youtubeVideoId?: string;
 }
 
 export interface PlaybackState {
@@ -41,4 +43,16 @@ export interface PlayerContextValue extends PlaybackState {
   repeatMode: 'off' | 'all' | 'one';
   toggleShuffle: () => void;
   toggleRepeat: () => void;
+  /** YouTube-specific: whether the YouTube iframe should be playing */
+  ytPlaying: boolean;
+  setYtPlaying: React.Dispatch<React.SetStateAction<boolean>>;
+  /** Whether the YouTube player is in audio-only mode (video hidden) */
+  audioOnly: boolean;
+  setAudioOnly: React.Dispatch<React.SetStateAction<boolean>>;
+  /** YouTube playback position in seconds (polled from player) */
+  ytPosition: number;
+  setYtPosition: React.Dispatch<React.SetStateAction<number>>;
+  /** YouTube track duration in seconds (polled from player) */
+  ytDuration: number;
+  setYtDuration: React.Dispatch<React.SetStateAction<number>>;
 }

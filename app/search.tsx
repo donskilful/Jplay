@@ -10,8 +10,7 @@ import SongCard from '../components/SongCard';
 import OptionsModal from '../components/OptionsModal';
 import { usePlayerContext } from '../context/PlayerContext';
 import { useTheme } from '../context/ThemeContext';
-import { searchArchive } from '../services/archiveAPI';
-import { searchJamendo } from '../services/jamendoAPI';
+import { searchYouTube } from '../services/youtubeAPI';
 import type { Song } from '../types';
 import { FONT, RADIUS } from '../constants/theme';
 import type { ThemeColors } from '../constants/theme';
@@ -74,8 +73,7 @@ export default function SearchScreen(): React.JSX.Element {
 
   const [query, setQuery] = useState('');
   const [localResults, setLocalResults] = useState<Song[]>([]);
-  const [jamendoResults, setJamendoResults] = useState<Song[]>([]);
-  const [archiveResults, setArchiveResults] = useState<Song[]>([]);
+  const [youtubeResults, setYoutubeResults] = useState<Song[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [selectedSong, setSelectedSong] = useState<Song | null>(null);
 
@@ -83,14 +81,18 @@ export default function SearchScreen(): React.JSX.Element {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const playStreamed = useCallback(async (song: Song): Promise<void> => {
-    // Add all current search results to queue so next/prev navigates through them
-    const allResults = [...localResults, ...jamendoResults, ...archiveResults];
+    const allResults = [...localResults, ...youtubeResults];
     const toAdd = allResults.filter(r => !songs.some(s => s.id === r.id));
     const updatedSongs = toAdd.length > 0 ? [...songs, ...toAdd] : songs;
     if (toAdd.length > 0) setSongs(updatedSongs);
     const index = updatedSongs.findIndex(s => s.id === song.id);
     await play(song, index >= 0 ? index : 0);
-  }, [songs, setSongs, play, localResults, jamendoResults, archiveResults]);
+    // YouTube songs are played via the iframe in the player screen.
+    // Without navigating there the iframe stays 1×1 px and iOS blocks autoplay.
+    if (song.source === 'youtube') {
+      router.push('/player');
+    }
+  }, [songs, setSongs, play, localResults, youtubeResults]);
 
   useEffect(() => {
     const q = query.trim();
@@ -98,8 +100,7 @@ export default function SearchScreen(): React.JSX.Element {
     // Local search is instant
     if (!q) {
       setLocalResults([]);
-      setJamendoResults([]);
-      setArchiveResults([]);
+      setYoutubeResults([]);
       setIsSearching(false);
       return;
     }
@@ -125,13 +126,9 @@ export default function SearchScreen(): React.JSX.Element {
 
       void (async () => {
         try {
-          const [jamendo, archive] = await Promise.all([
-            searchJamendo(q, 10, controller.signal),
-            searchArchive(q, 10, controller.signal),
-          ]);
+          const youtube = await searchYouTube(q, 15, controller.signal);
           if (!controller.signal.aborted) {
-            setJamendoResults(jamendo);
-            setArchiveResults(archive);
+            setYoutubeResults(youtube);
           }
         } catch {
           // AbortError or network error — ignore
@@ -152,14 +149,11 @@ export default function SearchScreen(): React.JSX.Element {
     if (localResults.length > 0) {
       result.push({ title: 'In Your Library', subtitle: `${localResults.length} found`, data: localResults });
     }
-    if (jamendoResults.length > 0) {
-      result.push({ title: 'Jamendo', subtitle: 'Full tracks · Creative Commons', data: jamendoResults });
-    }
-    if (archiveResults.length > 0) {
-      result.push({ title: 'Free Music Archive', subtitle: 'Full tracks · Public domain', data: archiveResults });
+    if (youtubeResults.length > 0) {
+      result.push({ title: 'YouTube', subtitle: 'Full tracks · Video + Audio', data: youtubeResults });
     }
     return result;
-  }, [localResults, jamendoResults, archiveResults]);
+  }, [localResults, youtubeResults]);
 
   const hasResults = sections.length > 0;
   const isTyping = query.trim().length > 0;
@@ -238,7 +232,7 @@ export default function SearchScreen(): React.JSX.Element {
           <Ionicons name="search" size={48} color={colors.textMuted} />
           <Text style={styles.emptyTitle}>Search everything</Text>
           <Text style={styles.emptySubtitle}>
-            Search your library, full tracks on Jamendo, and iTunes previews all at once
+            Search your library, YouTube, Jamendo, and Free Music Archive all at once
           </Text>
         </View>
       ) : !hasResults && !isSearching ? (

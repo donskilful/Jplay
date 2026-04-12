@@ -16,7 +16,7 @@ function makeStyles(colors: ThemeColors, tabBarBottom: number) {
       position: 'absolute',
       left: 0,
       right: 0,
-      bottom: tabBarBottom + 8,
+      bottom: tabBarBottom,
     },
     container: {
       marginHorizontal: 10,
@@ -79,7 +79,21 @@ export default function MiniPlayer(): React.JSX.Element | null {
     currentSong, isPlaying, position, duration,
     playNext, playPrev, togglePlayPause,
     isShuffle, repeatMode, toggleShuffle, toggleRepeat,
+    ytPlaying, setYtPlaying, ytPosition, ytDuration,
   } = usePlayerContext();
+
+  const isYouTube = currentSong?.source === 'youtube';
+  const displayIsPlaying = isYouTube ? ytPlaying : isPlaying;
+  const displayPosition = isYouTube ? ytPosition * 1000 : position;
+  const displayDuration = isYouTube ? ytDuration * 1000 : duration;
+
+  const handlePlayPause = (): void => {
+    if (isYouTube) {
+      setYtPlaying(prev => !prev);
+    } else {
+      void togglePlayPause();
+    }
+  };
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const tabBarBottom = TAB_BAR_HEIGHT + insets.bottom;
@@ -88,7 +102,7 @@ export default function MiniPlayer(): React.JSX.Element | null {
   const pathname = usePathname();
   if (!currentSong || pathname === '/player') return null;
 
-  const progress = duration > 0 ? position / duration : 0;
+  const progress = displayDuration > 0 ? displayPosition / displayDuration : 0;
 
   return (
     <View style={styles.wrapper}>
@@ -130,8 +144,8 @@ export default function MiniPlayer(): React.JSX.Element | null {
               <Ionicons name="play-skip-back" size={20} color={colors.textPrimary} />
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.playBtn} onPress={() => void togglePlayPause()}>
-              <Ionicons name={isPlaying ? 'pause' : 'play'} size={18} color="#000" />
+            <TouchableOpacity style={styles.playBtn} onPress={handlePlayPause}>
+              <Ionicons name={displayIsPlaying ? 'pause' : 'play'} size={18} color="#000" />
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.btn} onPress={() => void playNext()} hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}>

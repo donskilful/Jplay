@@ -12,8 +12,7 @@ import HorizontalScroller from '../components/HorizontalScroller';
 import { usePlayerContext } from '../context/PlayerContext';
 import { useTheme } from '../context/ThemeContext';
 import { useImportSongs } from '../hooks/useImportSongs';
-import { getFeaturedArchiveTracks } from '../services/archiveAPI';
-import { getFeaturedJamendo } from '../services/jamendoAPI';
+import { searchYouTube } from '../services/youtubeAPI';
 import type { Song } from '../types';
 import { FONT, RADIUS } from '../constants/theme';
 import type { ThemeColors } from '../constants/theme';
@@ -96,12 +95,9 @@ export default function HomeScreen(): React.JSX.Element {
     abortRef.current = new AbortController();
     void (async () => {
       try {
-        const [jamendo, archive] = await Promise.all([
-          getFeaturedJamendo(12, abortRef.current?.signal),
-          getFeaturedArchiveTracks(12, abortRef.current?.signal),
-        ]);
+        const youtube = await searchYouTube('top hits music 2024', 12, abortRef.current?.signal);
         if (!abortRef.current?.signal.aborted) {
-          setTrending([...jamendo, ...archive]);
+          setTrending(youtube);
         }
       } catch {
         // Network unavailable
@@ -236,7 +232,7 @@ export default function HomeScreen(): React.JSX.Element {
             renderItem={({ item }) => (
               <ArtistCard
                 name={item.name}
-                artwork={item.artwork}
+                {...(item.artwork !== undefined ? { artwork: item.artwork } : {})}
                 songCount={item.songCount}
                 onPress={() => router.push('/library')}
               />

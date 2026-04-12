@@ -47,9 +47,13 @@ export function useAudioPlayer(songs: Song[]): AudioPlayerReturn {
   useEffect(() => {
     void Audio.setAudioModeAsync({
       allowsRecordingIOS: false,
+      // Keep the AVAudioSession in .playback category at all times so iOS
+      // knows to keep this app alive when it goes to background, regardless
+      // of whether expo-av or the YouTube WebView is producing the audio.
       staysActiveInBackground: true,
       playsInSilentModeIOS: true,
       shouldDuckAndroid: true,
+      playThroughEarpieceAndroid: false,
     });
 
     return () => {
@@ -66,9 +70,7 @@ export function useAudioPlayer(songs: Song[]): AudioPlayerReturn {
     // Each call gets a unique ID — only the latest one may proceed
     const thisLoadId = ++loadIdRef.current;
 
-    setState(prev => ({ ...prev, isLoading: true, isPlaying: false }));
-
-    // Stop playback immediately before unloading to prevent audio overlap
+    // Stop any existing audio playback first
     if (soundRef.current) {
       try {
         await soundRef.current.stopAsync();
@@ -81,6 +83,24 @@ export function useAudioPlayer(songs: Song[]): AudioPlayerReturn {
 
     // A newer tap came in while we were stopping — bail out
     if (thisLoadId !== loadIdRef.current) return;
+
+    // YouTube songs are played by the player screen via YoutubeIframe — skip expo-av
+    if (song.source === 'youtube') {
+      currentIndexRef.current = index;
+      setCurrentIndex(index);
+      setState(prev => ({
+        ...prev,
+        currentSong: song,
+        currentIndex: index,
+        isPlaying: false,
+        isLoading: false,
+        position: 0,
+        duration: 0,
+      }));
+      return;
+    }
+
+    setState(prev => ({ ...prev, isLoading: true, isPlaying: false }));
 
     const { sound } = await Audio.Sound.createAsync(
       { uri: song.uri },

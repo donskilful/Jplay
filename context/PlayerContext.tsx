@@ -41,6 +41,10 @@ export function PlayerProvider({ children }: PlayerProviderProps): React.JSX.Ele
   const [downloads, setDownloads] = useState<string[]>([]);
   const [recentlyPlayed, setRecentlyPlayed] = useState<Song[]>([]);
   const [hydrated, setHydrated] = useState(false);
+  const [ytPlaying, setYtPlaying] = useState(false);
+  const [audioOnly, setAudioOnly] = useState(true);
+  const [ytPosition, setYtPosition] = useState(0);
+  const [ytDuration, setYtDuration] = useState(0);
 
   // Load persisted data on first mount
   useEffect(() => {
@@ -84,6 +88,18 @@ export function PlayerProvider({ children }: PlayerProviderProps): React.JSX.Ele
   const player = useAudioPlayer(songs);
   const { play: playerPlay } = player;
 
+  // When the song changes via playNext/playPrev (which bypass wrappedPlay),
+  // sync ytPlaying so YouTube songs always autoplay and non-YouTube clears the flag.
+  useEffect(() => {
+    const song = player.currentSong;
+    if (!song) return;
+    setYtPlaying(song.source === 'youtube');
+    setAudioOnly(true); // each new song starts in audio-only; user opts into video
+    setYtPosition(0);
+    setYtDuration(0);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [player.currentSong?.id]);
+
   const toggleFavorite = useCallback((song: Song): void => {
     setFavorites(prev => {
       if (prev.includes(song.id)) {
@@ -109,6 +125,8 @@ export function PlayerProvider({ children }: PlayerProviderProps): React.JSX.Ele
   }, [downloads]);
 
   const wrappedPlay = useCallback(async (song: Song, index: number): Promise<void> => {
+    // Autoplay YouTube songs immediately; clear state for non-YouTube
+    setYtPlaying(song.source === 'youtube');
     await playerPlay(song, index);
     setRecentlyPlayed(prev => [song, ...prev.filter(s => s.id !== song.id)].slice(0, 10));
   }, [playerPlay]);
@@ -126,6 +144,14 @@ export function PlayerProvider({ children }: PlayerProviderProps): React.JSX.Ele
     isDownloaded,
     ...player,
     play: wrappedPlay,
+    ytPlaying,
+    setYtPlaying,
+    audioOnly,
+    setAudioOnly,
+    ytPosition,
+    setYtPosition,
+    ytDuration,
+    setYtDuration,
   };
 
   return (
