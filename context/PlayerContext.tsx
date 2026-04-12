@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Song, PlayerContextValue } from '../types';
 import { useAudioPlayer } from '../hooks/useAudioPlayer';
@@ -42,9 +42,29 @@ export function PlayerProvider({ children }: PlayerProviderProps): React.JSX.Ele
   const [recentlyPlayed, setRecentlyPlayed] = useState<Song[]>([]);
   const [hydrated, setHydrated] = useState(false);
   const [ytPlaying, setYtPlaying] = useState(false);
-  const [audioOnly, setAudioOnly] = useState(true);
+  const [audioOnly, setAudioOnly] = useState(false);
   const [ytPosition, setYtPosition] = useState(0);
   const [ytDuration, setYtDuration] = useState(0);
+  const ytSeekRef = useRef<((seconds: number) => void) | null>(null);
+  const ytSeekTo = useCallback((seconds: number): void => {
+    ytSeekRef.current?.(seconds);
+  }, []);
+  const registerYtSeek = useCallback((fn: ((seconds: number) => void) | null): void => {
+    ytSeekRef.current = fn;
+  }, []);
+
+  const ytPlayRef = useRef<(() => void) | null>(null);
+  const ytPauseRef = useRef<(() => void) | null>(null);
+  const ytPlayVideo = useCallback((): void => {
+    ytPlayRef.current?.();
+  }, []);
+  const ytPauseVideo = useCallback((): void => {
+    ytPauseRef.current?.();
+  }, []);
+  const registerYtPlayPause = useCallback((playFn: (() => void) | null, pauseFn: (() => void) | null): void => {
+    ytPlayRef.current = playFn;
+    ytPauseRef.current = pauseFn;
+  }, []);
 
   // Load persisted data on first mount
   useEffect(() => {
@@ -94,8 +114,8 @@ export function PlayerProvider({ children }: PlayerProviderProps): React.JSX.Ele
     const song = player.currentSong;
     if (!song) return;
     setYtPlaying(song.source === 'youtube');
-    // Default to audio-only on each new YouTube track; user can opt into video.
-    setAudioOnly(true);
+    // Default to video mode so the iframe is visible and autoplay is reliable.
+    setAudioOnly(false);
     setYtPosition(0);
     setYtDuration(0);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -153,6 +173,11 @@ export function PlayerProvider({ children }: PlayerProviderProps): React.JSX.Ele
     setYtPosition,
     ytDuration,
     setYtDuration,
+    ytSeekTo,
+    registerYtSeek,
+    ytPlayVideo,
+    ytPauseVideo,
+    registerYtPlayPause,
   };
 
   return (

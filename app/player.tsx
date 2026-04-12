@@ -173,6 +173,9 @@ export default function PlayerScreen(): React.JSX.Element {
     setAudioOnly,
     ytPosition,
     ytDuration,
+    ytSeekTo,
+    ytPlayVideo,
+    ytPauseVideo,
   } = usePlayerContext();
 
   const styles = React.useMemo(() => makeStyles(colors, colors.accent), [colors]);
@@ -185,11 +188,17 @@ export default function PlayerScreen(): React.JSX.Element {
 
   const handlePlayPause = useCallback(async (): Promise<void> => {
     if (isYouTube) {
-      setYtPlaying(prev => !prev);
+      if (ytPlaying) {
+        ytPauseVideo();
+        setYtPlaying(false);
+      } else {
+        ytPlayVideo();
+        setYtPlaying(true);
+      }
     } else {
       await togglePlayPause();
     }
-  }, [isYouTube, setYtPlaying, togglePlayPause]);
+  }, [isYouTube, ytPlaying, setYtPlaying, ytPlayVideo, ytPauseVideo, togglePlayPause]);
 
   const displayIsPlaying = isYouTube ? ytPlaying : isPlaying;
   // YouTube position/duration come in seconds; slider/formatTime expect milliseconds
@@ -434,7 +443,7 @@ export default function PlayerScreen(): React.JSX.Element {
             minimumValue={0}
             maximumValue={displayDuration > 0 ? displayDuration : 1}
             value={displayPosition}
-            onSlidingComplete={isYouTube ? () => { /* seek handled by YouTube native controls */ } : seekTo}
+            onSlidingComplete={isYouTube ? (ms: number) => { ytSeekTo(ms / 1000); } : seekTo}
             minimumTrackTintColor={colors.accent}
             maximumTrackTintColor={colors.border}
             thumbTintColor={colors.accent}

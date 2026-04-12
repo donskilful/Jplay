@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { View, StyleSheet, Platform, Dimensions, AppState } from 'react-native';
+import { View, StyleSheet, Platform, Dimensions, AppState, StatusBar } from 'react-native';
 import { Tabs, usePathname } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
@@ -102,7 +102,7 @@ function TabsNavigator(): React.JSX.Element {
 // Persistent YouTube player — lives OUTSIDE the tab system so it never unmounts
 // when switching tabs, keeping audio alive in the background.
 function PersistentYouTubePlayer(): React.JSX.Element | null {
-  const { currentSong, ytPlaying, setYtPlaying, audioOnly, playNext, setYtPosition, setYtDuration } = usePlayerContext();
+  const { currentSong, ytPlaying, setYtPlaying, audioOnly, playNext, setYtPosition, setYtDuration, registerYtSeek, registerYtPlayPause } = usePlayerContext();
   const insets = useSafeAreaInsets();
   const pathname = usePathname();
   const ytRef = useRef<YoutubeIframeRef>(null);
@@ -114,7 +114,13 @@ function PersistentYouTubePlayer(): React.JSX.Element | null {
   // We only commit ytPlaying=false if no 'playing' event follows within 500 ms.
   const pauseDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const appStateRef = useRef(AppState.currentState);
-  const [ytReady, setYtReady] = React.useState(false);
+  const ytPlayingRef = useRef(ytPlaying);
+  ytPlayingRef.current = ytPlaying;
+  // Track which videoId is ready — avoids stale ytReady from a previous video.
+  // When videoId changes, readyVideoId no longer matches → ytReady is immediately false
+  // without needing an effect (no stale-render race condition).
+  const [readyVideoId, setReadyVideoId] = React.useState<string | null>(null);
+  const ytReady = readyVideoId === currentSong?.youtubeVideoId;
 
   // Track foreground/background so we don't treat background pause as user pause.
   useEffect(() => {
@@ -127,12 +133,13 @@ function PersistentYouTubePlayer(): React.JSX.Element | null {
   // Reset guards whenever the video changes (this component never unmounts).
   useEffect(() => {
     hasPlayedRef.current = false;
-    setYtReady(false);
+    registerYtSeek(null);
+    registerYtPlayPause(null, null);
     if (pauseDebounceRef.current) {
       clearTimeout(pauseDebounceRef.current);
       pauseDebounceRef.current = null;
     }
-  }, [currentSong?.youtubeVideoId]);
+  }, [currentSong?.youtubeVideoId, registerYtSeek, registerYtPlayPause]);
 
   // If UI requests play, cancel any pending debounced pause commit from a
   // transient YouTube "paused" event so controls don't desync.
@@ -193,6 +200,7 @@ function PersistentYouTubePlayer(): React.JSX.Element | null {
   return (
     <View style={[StyleSheet.absoluteFillObject, { zIndex: videoStyle.zIndex }]} pointerEvents="box-none">
       <View
+        pointerEvents="none"
         style={{
           position: 'absolute',
           overflow: 'hidden',
@@ -205,21 +213,43 @@ function PersistentYouTubePlayer(): React.JSX.Element | null {
           videoId={currentSong.youtubeVideoId}
           height={showVideo || showAudioOnlyOnPlayer ? VIDEO_H : 1}
           width={showVideo || showAudioOnlyOnPlayer ? VIDEO_W : 1}
-          play={ytPlaying}
+          play={ytPlaying && ytReady}
           forceAndroidAutoplay
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          initialPlayerParams={{ autoplay: 1, controls: 1, rel: 0 } as any}
+          initialPlayerParams={{ autoplay: 1, controls: 0, rel: 0, modestbranding: 1, playsinline: 1 } as any}
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           webViewProps={({
             allowsInlineMediaPlayback: true,
             mediaPlaybackRequiresUserAction: false,
             allowsBackgroundMediaPlayback: true,
+            // Belt-and-suspenders: auto-play inside the WebView once YouTube player is ready.
+            // This runs independently of React state and bypasses any postMessage issues.
+            injectedJavaScript: `
+              (function() {
+                var ap = setInterval(function() {
+                  if (typeof player !== 'undefined' && player && typeof player.playVideo === 'function') {
+                    try { player.playVideo(); } catch(e) {}
+                    clearInterval(ap);
+                  }
+                }, 150);
+                setTimeout(function() { clearInterval(ap); }, 10000);
+              })();
+              true;
+            `,
           }) as any}
-          // Ensure ytPlaying is true when the YouTube player is ready so the
-          // play prop triggers correctly after any initialization 'paused' event.
           onReady={() => {
-            setYtReady(true);
-            setYtPlaying(true);
+            registerYtSeek((seconds: number) => {
+              ytRef.current?.seekTo(seconds, true);
+            });
+            // Register direct playVideo/pauseVideo via injectJavaScript (patched ref)
+            registerYtPlayPause(
+              () => { (ytRef.current as any)?.playVideo?.(); },
+              () => { (ytRef.current as any)?.pauseVideo?.(); },
+            );
+            // Mark this specific videoId as ready. The play prop is gated:
+            // play={ytPlaying && ytReady} where ytReady = readyVideoId === videoId.
+            // This guarantees a false→true transition that triggers playVideo().
+            setReadyVideoId(currentSong.youtubeVideoId ?? null);
           }}
           onChangeState={(state) => {
             if (state === 'playing') {
@@ -229,7 +259,8 @@ function PersistentYouTubePlayer(): React.JSX.Element | null {
                 clearTimeout(pauseDebounceRef.current);
                 pauseDebounceRef.current = null;
               }
-              setYtPlaying(true);
+              // Sync context so UI shows the correct state
+              if (!ytPlayingRef.current) setYtPlaying(true);
             }
             // Only sync 'paused' after the first successful play and only after
             // a 500 ms delay. YouTube fires 'paused' transiently during buffering
@@ -261,6 +292,7 @@ export default function RootLayout(): React.JSX.Element | null {
     <ThemeProvider>
       <PlayerProvider>
         <View style={{ flex: 1 }}>
+          <StatusBar barStyle="light-content" backgroundColor="#0A0A1A" />
           <TabsNavigator />
           <MiniPlayer />
           <PersistentYouTubePlayer />

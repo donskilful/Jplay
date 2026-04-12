@@ -1,0 +1,32 @@
+diff --git a/node_modules/react-native-youtube-iframe/src/YoutubeIframe.js b/node_modules/react-native-youtube-iframe/src/YoutubeIframe.js
+index 4bbf487..26bf47e 100644
+--- a/node_modules/react-native-youtube-iframe/src/YoutubeIframe.js
++++ b/node_modules/react-native-youtube-iframe/src/YoutubeIframe.js
+@@ -121,17 +121,24 @@ const YoutubeIframe = (props, ref) => {
+           PLAYER_FUNCTIONS.seekToScript(seconds, allowSeekAhead),
+         );
+       },
++      playVideo: () => {
++        webViewRef.current?.injectJavaScript(PLAYER_FUNCTIONS.playVideo);
++      },
++      pauseVideo: () => {
++        webViewRef.current?.injectJavaScript(PLAYER_FUNCTIONS.pauseVideo);
++      },
+     }),
+     [],
+   );
+ 
+   useEffect(() => {
++    if (!playerReady) return;
+     if (play) {
+-      sendPostMessage('playVideo', {});
++      webViewRef.current?.injectJavaScript(PLAYER_FUNCTIONS.playVideo);
+     } else {
+-      sendPostMessage('pauseVideo', {});
++      webViewRef.current?.injectJavaScript(PLAYER_FUNCTIONS.pauseVideo);
+     }
+-  }, [play, sendPostMessage]);
++  }, [play, playerReady]);
+ 
+   useEffect(() => {
+     if (mute) {
