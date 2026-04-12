@@ -177,7 +177,10 @@ function PersistentYouTubePlayer(): React.JSX.Element | null {
   // When in audio-only on player: keep same size/position but nearly invisible
   // so iOS still treats it as an active player and autoplay remains reliable.
   // When fully hidden (other tabs): keep off-screen valid-size viewport.
-  const videoStyle = (showVideo || showAudioOnlyOnPlayer)
+  // On Android, WebViews ignore low opacity and remain visible, so we move
+  // the iframe off-screen in audio-only mode instead of relying on opacity.
+  const useOffscreen = showAudioOnlyOnPlayer && Platform.OS === 'android';
+  const videoStyle = showVideo || (showAudioOnlyOnPlayer && !useOffscreen)
     ? {
         top: insets.top + PLAYER_HEADER_H,
         left: 32,
