@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, TextInput, FlatList, StyleSheet, SafeAreaView,
-  TouchableOpacity, Share, ActivityIndicator, SectionList,
+  TouchableOpacity, Share, ActivityIndicator, SectionList, Alert,
 } from 'react-native';
 import type { SectionListData, SectionListRenderItemInfo } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -11,6 +11,7 @@ import OptionsModal from '../components/OptionsModal';
 import { usePlayerContext } from '../context/PlayerContext';
 import { useTheme } from '../context/ThemeContext';
 import { searchYouTube } from '../services/youtubeAPI';
+import { checkServerHealth } from '../services/streamAPI';
 import type { Song } from '../types';
 import { FONT, RADIUS } from '../constants/theme';
 import type { ThemeColors } from '../constants/theme';
@@ -80,6 +81,9 @@ export default function SearchScreen(): React.JSX.Element {
   const abortRef = useRef<AbortController | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Wake up the server as soon as search screen opens
+  useEffect(() => { void checkServerHealth(); }, []);
+
   const [loadingSongId, setLoadingSongId] = useState<string | null>(null);
 
   const playStreamed = useCallback(async (song: Song): Promise<void> => {
@@ -91,9 +95,11 @@ export default function SearchScreen(): React.JSX.Element {
       const updatedSongs = toAdd.length > 0 ? [...songs, ...toAdd] : songs;
       if (toAdd.length > 0) setSongs(updatedSongs);
       const index = updatedSongs.findIndex(s => s.id === song.id);
-      setQuery('');
       await play(song, index >= 0 ? index : 0);
+      setQuery('');
       router.push('/player');
+    } catch {
+      Alert.alert('Playback Error', 'Could not load this song. The server may be waking up — please try again in a moment.');
     } finally {
       setLoadingSongId(null);
     }
