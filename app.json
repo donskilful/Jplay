@@ -46,7 +46,8 @@
       ],
       "expo-asset",
       "expo-font",
-      "react-native-bottom-tabs"
+      "react-native-bottom-tabs",
+      "expo-localization"
     ],
     "experiments": {
       "typedRoutes": true
