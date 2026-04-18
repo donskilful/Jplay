@@ -8,7 +8,7 @@
     "android": "expo run:android",
     "ios:device": "expo run:ios --configuration Release --device",
     "android:release": "cd android && ./gradlew assembleRelease",
-    "ios:fresh": "expo run:ios --clear",
+    "ios:fresh": "expo run:ios",
     "android:fresh": "expo run:android --no-build-cache",
     "lint": "eslint . --max-warnings 0",
     "lint:fix": "eslint . --fix",

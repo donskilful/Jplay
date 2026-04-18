@@ -23,12 +23,35 @@ export async function getStreamUrl(
   const cached = streamCache.get(videoId);
   if (cached && isFresh(cached)) return cached;
 
-  const res = await fetch(`${BACKEND_URL}/stream/${videoId}`, signal ? { signal } : undefined);
-  if (!res.ok) throw new Error(`Stream fetch failed: ${res.status}`);
+  const timeout = new AbortController();
+  const timer = setTimeout(() => timeout.abort(), 60_000);
 
-  const info = (await res.json()) as StreamInfo;
-  streamCache.set(videoId, info);
-  return info;
+  // Merge caller's signal with our timeout signal
+  const mergedSignal = signal ?? timeout.signal;
+  if (signal) {
+    signal.addEventListener('abort', () => timeout.abort(), { once: true });
+  }
+
+  try {
+    const res = await fetch(`${BACKEND_URL}/stream/${videoId}`, { signal: mergedSignal });
+    if (!res.ok) throw new Error(`Stream fetch failed: ${res.status}`);
+    const info = (await res.json()) as StreamInfo;
+    streamCache.set(videoId, info);
+    return info;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+export async function wakeServer(): Promise<void> {
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 70_000);
+    await fetch(`${BACKEND_URL}/health`, { signal: controller.signal });
+    clearTimeout(timer);
+  } catch {
+    // Best-effort wake — ignore errors
+  }
 }
 
 export function getAudioDownloadUrl(videoId: string): string {

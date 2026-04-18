@@ -1,6 +1,7 @@
 import TrackPlayer from 'react-native-track-player';
 import React, { useEffect } from 'react';
 import { View, StyleSheet, Platform, StatusBar } from 'react-native';
+import { wakeServer } from '../services/streamAPI';
 
 // Register the background playback service once at module load time
 TrackPlayer.registerPlaybackService(() => require('../services/trackPlayerService'));
@@ -99,6 +100,10 @@ function TabsNavigator(): React.JSX.Element {
 export default function RootLayout(): React.JSX.Element | null {
   const [fontsLoaded, fontError] = useFonts({ Outfit_400Regular, Outfit_600SemiBold, Outfit_700Bold });
   useDeviceRegistration();
+
+  useEffect(() => {
+    void wakeServer();
+  }, []);
 
   useEffect(() => {
     if (fontsLoaded || fontError) void SplashScreen.hideAsync();

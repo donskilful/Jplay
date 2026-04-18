@@ -11,7 +11,6 @@ import OptionsModal from '../components/OptionsModal';
 import { usePlayerContext } from '../context/PlayerContext';
 import { useTheme } from '../context/ThemeContext';
 import { searchYouTube } from '../services/youtubeAPI';
-import { checkServerHealth } from '../services/streamAPI';
 import type { Song } from '../types';
 import { FONT, RADIUS } from '../constants/theme';
 import type { ThemeColors } from '../constants/theme';
@@ -81,13 +80,14 @@ export default function SearchScreen(): React.JSX.Element {
   const abortRef = useRef<AbortController | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Wake up the server as soon as search screen opens
-  useEffect(() => { void checkServerHealth(); }, []);
-
   const [loadingSongId, setLoadingSongId] = useState<string | null>(null);
+  const isLoadingRef = useRef(false);
+  const alertActiveRef = useRef(false);
+  const playStreamedRef = useRef<(song: Song) => Promise<void>>();
 
   const playStreamed = useCallback(async (song: Song): Promise<void> => {
-    if (loadingSongId) return;
+    if (isLoadingRef.current || alertActiveRef.current) return;
+    isLoadingRef.current = true;
     setLoadingSongId(song.id);
     try {
       const allResults = [...localResults, ...youtubeResults];
@@ -95,15 +95,28 @@ export default function SearchScreen(): React.JSX.Element {
       const updatedSongs = toAdd.length > 0 ? [...songs, ...toAdd] : songs;
       if (toAdd.length > 0) setSongs(updatedSongs);
       const index = updatedSongs.findIndex(s => s.id === song.id);
-      await play(song, index >= 0 ? index : 0);
-      setQuery('');
       router.push('/player');
-    } catch {
-      Alert.alert('Playback Error', 'Could not load this song. The server may be waking up — please try again in a moment.');
+      setQuery('');
+      await play(song, index >= 0 ? index : 0);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error('[playStreamed] error:', msg);
+      alertActiveRef.current = true;
+      Alert.alert(
+        'Unable to Play',
+        msg,
+        [
+          { text: 'Cancel', style: 'cancel', onPress: () => { alertActiveRef.current = false; } },
+          { text: 'Try Again', onPress: () => { alertActiveRef.current = false; void playStreamedRef.current?.(song); } },
+        ]
+      );
     } finally {
+      isLoadingRef.current = false;
       setLoadingSongId(null);
     }
-  }, [loadingSongId, songs, setSongs, play, localResults, youtubeResults]);
+  }, [songs, setSongs, play, localResults, youtubeResults]);
+
+  playStreamedRef.current = playStreamed;
 
   useEffect(() => {
     const q = query.trim();

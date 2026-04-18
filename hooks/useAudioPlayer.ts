@@ -61,11 +61,15 @@ export function useAudioPlayer(songs: Song[]): AudioPlayerReturn {
   repeatModeRef.current = repeatMode;
   const [isLoading, setIsLoading] = useState(false);
   const loadIdRef = useRef(0);
+  const isLoadingRef = useRef(false);
 
   const playbackState = usePlaybackState();
   const progress = useProgress(500);
 
   const isPlaying = playbackState.state === State.Playing;
+  const isNativeBuffering =
+    playbackState.state === State.Buffering ||
+    playbackState.state === State.Loading;
   const position = progress.position * 1000;
   const duration = progress.duration * 1000;
 
@@ -75,7 +79,12 @@ export function useAudioPlayer(songs: Song[]): AudioPlayerReturn {
 
   const loadSong = useCallback(async (song: Song, index: number): Promise<void> => {
     const thisLoadId = ++loadIdRef.current;
+    isLoadingRef.current = true;
     setIsLoading(true);
+    // Show song info immediately so the player screen has content while loading
+    currentIndexRef.current = index;
+    setCurrentIndex(index);
+    setCurrentSong(song);
 
     try {
       let resolvedSong = song;
@@ -104,12 +113,12 @@ export function useAudioPlayer(songs: Song[]): AudioPlayerReturn {
       };
       await TrackPlayer.add(track);
       await TrackPlayer.play();
-
-      currentIndexRef.current = index;
-      setCurrentIndex(index);
       setCurrentSong(resolvedSong);
     } finally {
-      if (thisLoadId === loadIdRef.current) setIsLoading(false);
+      if (thisLoadId === loadIdRef.current) {
+        isLoadingRef.current = false;
+        setIsLoading(false);
+      }
     }
   }, []);
 
@@ -150,9 +159,9 @@ export function useAudioPlayer(songs: Song[]): AudioPlayerReturn {
     if (prev) await loadSong(prev, prevIndex);
   }, [loadSong]);
 
-  // Auto-advance when track ends
+  // Auto-advance when track ends — skip if a user-initiated load is already in progress
   useTrackPlayerEvents([Event.PlaybackQueueEnded], () => {
-    void playNext();
+    if (!isLoadingRef.current) void playNext();
   });
 
   // Sync repeat mode with TrackPlayer
@@ -192,7 +201,7 @@ export function useAudioPlayer(songs: Song[]): AudioPlayerReturn {
     isPlaying,
     position,
     duration,
-    isLoading,
+    isLoading: isLoading || isNativeBuffering,
     play,
     pause,
     togglePlayPause,

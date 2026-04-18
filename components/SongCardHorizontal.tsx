@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, Image, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { Song } from '../types';
 import { useTheme } from '../context/ThemeContext';
@@ -10,6 +10,7 @@ interface SongCardHorizontalProps {
   song: Song;
   isActive: boolean;
   isPlaying: boolean;
+  isLoading?: boolean;
   onPress: () => void;
 }
 
@@ -36,12 +37,17 @@ function makeStyles(colors: ThemeColors) {
   });
 }
 
-export default function SongCardHorizontal({ song, isActive, isPlaying, onPress }: SongCardHorizontalProps): React.JSX.Element {
+export default function SongCardHorizontal({ song, isActive, isPlaying, isLoading, onPress }: SongCardHorizontalProps): React.JSX.Element {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
   return (
-    <TouchableOpacity style={styles.container} onPress={onPress} activeOpacity={0.75}>
+    <TouchableOpacity
+      style={[styles.container, isLoading !== undefined && isLoading === false ? { opacity: 0.4 } : undefined]}
+      onPress={onPress}
+      activeOpacity={0.75}
+      disabled={isLoading === false}
+    >
       <View style={styles.artworkWrapper}>
         {song.artwork ? (
           <Image source={{ uri: song.artwork }} style={styles.artwork} />
@@ -50,11 +56,15 @@ export default function SongCardHorizontal({ song, isActive, isPlaying, onPress 
             <Ionicons name="musical-note" size={32} color={colors.accent} />
           </View>
         )}
-        {isActive && (
+        {isLoading === true ? (
+          <View style={styles.overlay}>
+            <ActivityIndicator size="large" color={colors.accent} />
+          </View>
+        ) : isActive ? (
           <View style={styles.overlay}>
             <Ionicons name={isPlaying ? 'pause-circle' : 'play-circle'} size={32} color={colors.accent} />
           </View>
-        )}
+        ) : null}
       </View>
       <Text style={[styles.title, isActive && styles.activeTitle]} numberOfLines={1}>{song.title}</Text>
       <Text style={styles.artist} numberOfLines={1}>{song.artist}</Text>

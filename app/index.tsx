@@ -1,7 +1,7 @@
 import React, { useMemo, useCallback, useEffect, useState, useRef } from 'react';
 import {
   ScrollView, Text, StyleSheet, SafeAreaView,
-  View, TouchableOpacity, ActivityIndicator,
+  View, TouchableOpacity, ActivityIndicator, Alert,
 } from 'react-native';
 import type { ListRenderItemInfo } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -87,6 +87,10 @@ export default function HomeScreen(): React.JSX.Element {
 
   const { importSongs, isImporting } = useImportSongs(handleImported);
 
+  const [loadingSongId, setLoadingSongId] = useState<string | null>(null);
+  const isLoadingRef = useRef(false);
+  const alertActiveRef = useRef(false);
+  const playStreamedRef = useRef<(song: Song) => Promise<void>>();
   const [trending, setTrending] = useState<Song[]>([]);
   const [trendingLoading, setTrendingLoading] = useState(true);
   const abortRef = useRef<AbortController | null>(null);
@@ -109,16 +113,35 @@ export default function HomeScreen(): React.JSX.Element {
   }, []);
 
   const playStreamed = useCallback(async (song: Song): Promise<void> => {
-    // Add all trending songs to queue so next/prev works across the full list
-    const toAdd = trending.filter(t => !songs.some(s => s.id === t.id));
-    const updatedSongs = toAdd.length > 0 ? [...songs, ...toAdd] : songs;
-    if (toAdd.length > 0) setSongs(updatedSongs);
-    const index = updatedSongs.findIndex(s => s.id === song.id);
-    await play(song, index >= 0 ? index : 0);
-    if (song.source === 'stream') {
-      router.push('/player');
+    if (isLoadingRef.current || alertActiveRef.current) return;
+    isLoadingRef.current = true;
+    setLoadingSongId(song.id);
+    try {
+      const toAdd = trending.filter(t => !songs.some(s => s.id === t.id));
+      const updatedSongs = toAdd.length > 0 ? [...songs, ...toAdd] : songs;
+      if (toAdd.length > 0) setSongs(updatedSongs);
+      const index = updatedSongs.findIndex(s => s.id === song.id);
+      if (song.source === 'stream') router.push('/player');
+      await play(song, index >= 0 ? index : 0);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error('[playStreamed] error:', msg);
+      alertActiveRef.current = true;
+      Alert.alert(
+        'Unable to Play',
+        msg,
+        [
+          { text: 'Cancel', style: 'cancel', onPress: () => { alertActiveRef.current = false; } },
+          { text: 'Try Again', onPress: () => { alertActiveRef.current = false; void playStreamedRef.current?.(song); } },
+        ]
+      );
+    } finally {
+      isLoadingRef.current = false;
+      setLoadingSongId(null);
     }
   }, [songs, setSongs, play, trending]);
+
+  playStreamedRef.current = playStreamed;
 
   const artists = useMemo((): Artist[] => {
     const map = new Map<string, Artist>();
@@ -135,6 +158,7 @@ export default function HomeScreen(): React.JSX.Element {
       song={item}
       isActive={currentSong?.id === item.id}
       isPlaying={isPlaying && currentSong?.id === item.id}
+      isLoading={loadingSongId === item.id ? true : loadingSongId !== null ? false : undefined}
       onPress={() => void playStreamed(item)}
     />
   );
@@ -144,6 +168,7 @@ export default function HomeScreen(): React.JSX.Element {
       song={item}
       isActive={currentSong?.id === item.id}
       isPlaying={isPlaying && currentSong?.id === item.id}
+      isLoading={loadingSongId === item.id ? true : loadingSongId !== null ? false : undefined}
       onPress={() => void playStreamed(item)}
     />
   );
