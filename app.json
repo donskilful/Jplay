@@ -6,9 +6,16 @@
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0A0A1E"
+    },
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.jplay.app",
+      "icon": "./assets/icon.png",
       "infoPlist": {
         "UIBackgroundModes": [
           "audio"
@@ -17,6 +24,11 @@
     },
     "android": {
       "package": "com.jplay.app",
+      "icon": "./assets/icon.png",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0A0A1E"
+      },
       "permissions": [
         "android.permission.MODIFY_AUDIO_SETTINGS",
         "android.permission.READ_EXTERNAL_STORAGE",
