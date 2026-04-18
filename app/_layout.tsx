@@ -91,6 +91,7 @@ function TabsNavigator(): React.JSX.Element {
       />
       <Tabs.Screen name="library" options={{ href: null }} />
       <Tabs.Screen name="search" options={{ href: null }} />
+      <Tabs.Screen name="notification.click" options={{ href: null }} />
     </Tabs>
   );
 }

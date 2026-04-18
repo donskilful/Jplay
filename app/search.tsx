@@ -80,18 +80,24 @@ export default function SearchScreen(): React.JSX.Element {
   const abortRef = useRef<AbortController | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const [loadingSongId, setLoadingSongId] = useState<string | null>(null);
+
   const playStreamed = useCallback(async (song: Song): Promise<void> => {
-    const allResults = [...localResults, ...youtubeResults];
-    const toAdd = allResults.filter(r => !songs.some(s => s.id === r.id));
-    const updatedSongs = toAdd.length > 0 ? [...songs, ...toAdd] : songs;
-    if (toAdd.length > 0) setSongs(updatedSongs);
-    const index = updatedSongs.findIndex(s => s.id === song.id);
-    setQuery('');
-    await play(song, index >= 0 ? index : 0);
-    if (song.source === 'stream') {
+    if (loadingSongId) return;
+    setLoadingSongId(song.id);
+    try {
+      const allResults = [...localResults, ...youtubeResults];
+      const toAdd = allResults.filter(r => !songs.some(s => s.id === r.id));
+      const updatedSongs = toAdd.length > 0 ? [...songs, ...toAdd] : songs;
+      if (toAdd.length > 0) setSongs(updatedSongs);
+      const index = updatedSongs.findIndex(s => s.id === song.id);
+      setQuery('');
+      await play(song, index >= 0 ? index : 0);
       router.push('/player');
+    } finally {
+      setLoadingSongId(null);
     }
-  }, [songs, setSongs, play, localResults, youtubeResults]);
+  }, [loadingSongId, songs, setSongs, play, localResults, youtubeResults]);
 
   useEffect(() => {
     const q = query.trim();
@@ -181,13 +187,25 @@ export default function SearchScreen(): React.JSX.Element {
   ];
 
   const renderItem = ({ item }: SectionListRenderItemInfo<Song, ResultSection>): React.JSX.Element => (
-    <SongCard
-      song={item}
-      isActive={currentSong?.id === item.id}
-      isPlaying={isPlaying && currentSong?.id === item.id}
+    <TouchableOpacity
       onPress={() => void playStreamed(item)}
-      onOptions={() => setSelectedSong(item)}
-    />
+      activeOpacity={0.7}
+      disabled={loadingSongId !== null}
+      style={{ opacity: loadingSongId && loadingSongId !== item.id ? 0.4 : 1 }}
+    >
+      <SongCard
+        song={item}
+        isActive={currentSong?.id === item.id}
+        isPlaying={isPlaying && currentSong?.id === item.id}
+        onPress={() => void playStreamed(item)}
+        onOptions={() => setSelectedSong(item)}
+        rightSlot={
+          loadingSongId === item.id
+            ? <ActivityIndicator size="small" color="#8B5CF6" />
+            : undefined
+        }
+      />
+    </TouchableOpacity>
   );
 
   const renderSectionHeader = ({ section }: { section: SectionListData<Song, ResultSection> }): React.JSX.Element => (

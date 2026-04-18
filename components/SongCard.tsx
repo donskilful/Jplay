@@ -12,6 +12,7 @@ interface SongCardProps {
   isActive: boolean;
   onPress: () => void;
   onOptions: () => void;
+  rightSlot?: React.ReactNode;
 }
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
@@ -64,7 +65,7 @@ function makeStyles(colors: ThemeColors) {
 }
 
 export default function SongCard({
-  song, isPlaying, isActive, onPress, onOptions,
+  song, isPlaying, isActive, onPress, onOptions, rightSlot,
 }: SongCardProps): React.JSX.Element {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
@@ -97,19 +98,23 @@ export default function SongCard({
       </View>
 
       <View style={styles.right}>
-        {song.duration !== undefined && (
-          <Text style={styles.duration}>{formatDuration(song.duration)}</Text>
-        )}
-        {isActive ? (
-          <Ionicons name={getActiveIcon(isPlaying)} size={16} color={colors.accent} />
-        ) : (
-          <TouchableOpacity
-            onPress={(e) => { e.stopPropagation(); onOptions(); }}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            accessibilityLabel="Song options"
-          >
-            <Ionicons name="ellipsis-vertical" size={16} color={colors.textMuted} />
-          </TouchableOpacity>
+        {rightSlot ?? (
+          <>
+            {song.duration !== undefined && (
+              <Text style={styles.duration}>{formatDuration(song.duration)}</Text>
+            )}
+            {isActive ? (
+              <Ionicons name={getActiveIcon(isPlaying)} size={16} color={colors.accent} />
+            ) : (
+              <TouchableOpacity
+                onPress={(e) => { e.stopPropagation(); onOptions(); }}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                accessibilityLabel="Song options"
+              >
+                <Ionicons name="ellipsis-vertical" size={16} color={colors.textMuted} />
+              </TouchableOpacity>
+            )}
+          </>
         )}
       </View>
     </TouchableOpacity>
