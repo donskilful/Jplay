@@ -1,7 +1,5 @@
-import { YOUTUBE_API_KEY } from '../constants/config';
+import { BACKEND_URL } from '../constants/config';
 import type { Song } from '../types';
-
-const BASE = 'https://www.googleapis.com/youtube/v3';
 
 interface YouTubeSnippet {
   title: string;
@@ -16,10 +14,6 @@ interface YouTubeSnippet {
 interface YouTubeSearchItem {
   id: { videoId: string };
   snippet: YouTubeSnippet;
-}
-
-interface YouTubeSearchResponse {
-  items: YouTubeSearchItem[];
 }
 
 function decodeHtml(html: string): string {
@@ -56,17 +50,9 @@ export async function searchYouTube(
   limit = 10,
   signal?: AbortSignal,
 ): Promise<Song[]> {
-  const params = new URLSearchParams({
-    part: 'snippet',
-    q: query,
-    type: 'video',
-    videoCategoryId: '10', // Music
-    maxResults: String(limit),
-    key: YOUTUBE_API_KEY,
-  });
-
-  const res = await fetch(`${BASE}/search?${params}`, signal ? { signal } : undefined);
+  const params = new URLSearchParams({ q: query, limit: String(limit) });
+  const res = await fetch(`${BACKEND_URL}/search?${params}`, signal ? { signal } : undefined);
   if (!res.ok) return [];
-  const data = (await res.json()) as YouTubeSearchResponse;
+  const data = (await res.json()) as { items?: YouTubeSearchItem[] };
   return (data.items ?? []).filter(item => Boolean(item.id?.videoId)).map(toSong);
 }
