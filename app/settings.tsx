@@ -121,13 +121,13 @@ function AboutModal({ visible, onClose, colors, styles }: AboutModalProps): Reac
       <View style={styles.aboutModal}>
       <SafeAreaView style={styles.aboutSheet}>
         <View style={styles.aboutHeader}>
-          <Text style={styles.aboutTitle}>About JPlay</Text>
+          <Text style={styles.aboutTitle}>About JsPlay</Text>
           <TouchableOpacity style={styles.aboutClose} onPress={onClose}>
             <Ionicons name="close" size={20} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
         <ScrollView contentContainerStyle={styles.aboutScroll} showsVerticalScrollIndicator={false}>
-          <Text style={styles.aboutAppName}>JPlay</Text>
+          <Text style={styles.aboutAppName}>JsPlay</Text>
           <Text style={styles.aboutVersion}>Version 1.0.0</Text>
 
           <Text style={styles.aboutBody}>
@@ -135,7 +135,7 @@ function AboutModal({ visible, onClose, colors, styles }: AboutModalProps): Reac
           </Text>
 
           <View style={styles.aboutDivider} />
-          <Text style={styles.aboutFooter}>© 2026 JPlay · All rights reserved</Text>
+          <Text style={styles.aboutFooter}>© 2026 JsPlay · All rights reserved</Text>
         </ScrollView>
       </SafeAreaView>
       </View>

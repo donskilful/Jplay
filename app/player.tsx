@@ -188,7 +188,7 @@ export default function PlayerScreen(): React.JSX.Element {
     if (!currentSong) return;
     await Share.share({
       title: currentSong.title,
-      message: `🎵 "${currentSong.title}" by ${currentSong.artist}\nAlbum: ${currentSong.album} · ${currentSong.genre}\n\nListening on JPlay`,
+      message: `🎵 "${currentSong.title}" by ${currentSong.artist}\nAlbum: ${currentSong.album} · ${currentSong.genre}\n\nListening on JsPlay`,
     });
   };
 

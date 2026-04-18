@@ -155,7 +155,7 @@ export default function HomeScreen(): React.JSX.Element {
         {/* ── Header ── */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
-            <Text style={styles.appName}>JPlay</Text>
+            <Text style={styles.appName}>JsPlay</Text>
             <Text style={styles.headerSub}>
               {songs.length === 0 ? 'Import songs to get started' : `${songs.length} song${songs.length !== 1 ? 's' : ''} in your library`}
             </Text>

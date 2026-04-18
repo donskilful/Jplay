@@ -174,7 +174,7 @@ export default function SearchScreen(): React.JSX.Element {
       onPress: () => {
         void Share.share({
           title: song.title,
-          message: `🎵 "${song.title}" by ${song.artist}\nAlbum: ${song.album} · ${song.genre}\n\nListening on JPlay`,
+          message: `🎵 "${song.title}" by ${song.artist}\nAlbum: ${song.album} · ${song.genre}\n\nListening on JsPlay`,
         });
       },
     },
