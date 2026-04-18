@@ -131,7 +131,19 @@ function AboutModal({ visible, onClose, colors, styles }: AboutModalProps): Reac
           <Text style={styles.aboutVersion}>Version 1.0.0</Text>
 
           <Text style={styles.aboutBody}>
-            Your write-up will appear here. Send it over and I'll drop it in.
+            JsPlay is a personal music player built for streaming and enjoying music seamlessly on the go.
+          </Text>
+
+          <View style={styles.aboutDivider} />
+
+          <Text style={styles.aboutSectionHead}>⚠️ Personal Use Only</Text>
+          <Text style={styles.aboutBody}>
+            This application is strictly for personal use and is not intended for commercial purposes.
+            This app must not be sold, resold, or distributed for profit in any form.{'\n\n'}
+            If this application has been sold to you, please contact support immediately:
+          </Text>
+          <Text style={[styles.aboutBody, { marginTop: 8, fontWeight: '700' }]}>
+            donskilful@gmail.com
           </Text>
 
           <View style={styles.aboutDivider} />

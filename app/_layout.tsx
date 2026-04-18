@@ -13,6 +13,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { ThemeProvider, useTheme } from '../context/ThemeContext';
 import { PlayerProvider } from '../context/PlayerContext';
 import MiniPlayer from '../components/MiniPlayer';
+import { useDeviceRegistration } from '../hooks/useDeviceRegistration';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -96,6 +97,7 @@ function TabsNavigator(): React.JSX.Element {
 
 export default function RootLayout(): React.JSX.Element | null {
   const [fontsLoaded, fontError] = useFonts({ Outfit_400Regular, Outfit_600SemiBold, Outfit_700Bold });
+  useDeviceRegistration();
 
   useEffect(() => {
     if (fontsLoaded || fontError) void SplashScreen.hideAsync();
