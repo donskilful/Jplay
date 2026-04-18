@@ -74,16 +74,18 @@ export function useImportSongs(onImported: (songs: Song[]) => void) {
         const finalUri = (await FileSystem.getInfoAsync(dest)).exists ? dest : asset.uri;
         const { title, artist } = parseTitle(asset.name);
         const duration = await getDuration(finalUri);
-
-        imported.push({
+        const song: Song = {
           id: `imported_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
           title,
           artist,
           album: 'Imported',
           genre: 'Unknown',
           uri: finalUri,
-          duration,
-        });
+        };
+        if (duration !== undefined) {
+          song.duration = duration;
+        }
+        imported.push(song);
       }
 
       if (imported.length > 0) {

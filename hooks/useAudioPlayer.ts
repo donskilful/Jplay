@@ -1,7 +1,15 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Audio } from 'expo-av';
-import type { AVPlaybackStatus } from 'expo-av';
+import TrackPlayer, {
+  Capability,
+  Event,
+  RepeatMode,
+  State,
+  usePlaybackState,
+  useProgress,
+  useTrackPlayerEvents,
+} from 'react-native-track-player';
 import type { Song, PlaybackState } from '../types';
+import { getStreamUrl } from '../services/streamAPI';
 
 export interface AudioPlayerReturn extends PlaybackState {
   play: (song: Song, index: number) => Promise<void>;
@@ -16,126 +24,102 @@ export interface AudioPlayerReturn extends PlaybackState {
   toggleRepeat: () => void;
 }
 
+let playerReady = false;
+
+async function ensurePlayer(): Promise<void> {
+  if (playerReady) return;
+  await TrackPlayer.setupPlayer({
+    autoHandleInterruptions: true,
+  });
+  await TrackPlayer.updateOptions({
+    capabilities: [
+      Capability.Play,
+      Capability.Pause,
+      Capability.SkipToNext,
+      Capability.SkipToPrevious,
+      Capability.SeekTo,
+      Capability.Stop,
+    ],
+    compactCapabilities: [Capability.Play, Capability.Pause, Capability.SkipToNext],
+    progressUpdateEventInterval: 1,
+  });
+  playerReady = true;
+}
+
 export function useAudioPlayer(songs: Song[]): AudioPlayerReturn {
-  const soundRef = useRef<Audio.Sound | null>(null);
-  const currentIndexRef = useRef<number>(0);
   const songsRef = useRef<Song[]>(songs);
   songsRef.current = songs;
 
-  const [currentIndex, setCurrentIndex] = useState<number>(0);
+  const currentIndexRef = useRef<number>(0);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [currentSong, setCurrentSong] = useState<Song | null>(null);
   const [isShuffle, setIsShuffle] = useState(false);
   const [repeatMode, setRepeatMode] = useState<'off' | 'all' | 'one'>('off');
   const isShuffleRef = useRef(false);
   const repeatModeRef = useRef<'off' | 'all' | 'one'>('off');
   isShuffleRef.current = isShuffle;
   repeatModeRef.current = repeatMode;
+  const [isLoading, setIsLoading] = useState(false);
+  const loadIdRef = useRef(0);
 
-  const toggleShuffle = useCallback(() => setIsShuffle(prev => !prev), []);
-  const toggleRepeat = useCallback(() => {
-    setRepeatMode(prev => prev === 'off' ? 'all' : prev === 'all' ? 'one' : 'off');
-  }, []);
+  const playbackState = usePlaybackState();
+  const progress = useProgress(500);
 
-  const [state, setState] = useState<PlaybackState>({
-    currentSong: null,
-    currentIndex: 0,
-    isPlaying: false,
-    position: 0,
-    duration: 0,
-    isLoading: false,
-  });
+  const isPlaying = playbackState.state === State.Playing;
+  const position = progress.position * 1000;
+  const duration = progress.duration * 1000;
 
   useEffect(() => {
-    void Audio.setAudioModeAsync({
-      allowsRecordingIOS: false,
-      // Keep the AVAudioSession in .playback category at all times so iOS
-      // knows to keep this app alive when it goes to background, regardless
-      // of whether expo-av or the YouTube WebView is producing the audio.
-      staysActiveInBackground: true,
-      playsInSilentModeIOS: true,
-      shouldDuckAndroid: true,
-      playThroughEarpieceAndroid: false,
-    });
-
-    return () => {
-      void soundRef.current?.unloadAsync();
-    };
+    void ensurePlayer();
   }, []);
 
-  // Stable callback ref — always calls the latest version, never goes stale
-  const onStatusUpdateRef = useRef<(status: AVPlaybackStatus) => void>();
-  // Incremented on every loadSong call — lets us cancel in-flight loads
-  const loadIdRef = useRef<number>(0);
-
   const loadSong = useCallback(async (song: Song, index: number): Promise<void> => {
-    // Each call gets a unique ID — only the latest one may proceed
     const thisLoadId = ++loadIdRef.current;
+    setIsLoading(true);
 
-    // Stop any existing audio playback first
-    if (soundRef.current) {
-      try {
-        await soundRef.current.stopAsync();
-        await soundRef.current.unloadAsync();
-      } catch {
-        // Sound may already be in an unloaded state — safe to ignore
+    try {
+      let resolvedSong = song;
+      if (song.source === 'stream' && song.youtubeVideoId) {
+        const info = await getStreamUrl(song.youtubeVideoId);
+        if (thisLoadId !== loadIdRef.current) return;
+        resolvedSong = {
+          ...song,
+          uri: info.url,
+          duration: song.duration ?? info.duration * 1000,
+          artwork: song.artwork ?? info.thumbnail,
+        };
       }
-      soundRef.current = null;
-    }
 
-    // A newer tap came in while we were stopping — bail out
-    if (thisLoadId !== loadIdRef.current) return;
+      if (thisLoadId !== loadIdRef.current) return;
 
-    // YouTube songs are played by the player screen via YoutubeIframe — skip expo-av
-    if (song.source === 'youtube') {
+      await TrackPlayer.reset();
+      const track = {
+        id: resolvedSong.id,
+        url: resolvedSong.uri,
+        title: resolvedSong.title,
+        artist: resolvedSong.artist ?? '',
+        album: resolvedSong.album ?? '',
+        ...(resolvedSong.artwork ? { artwork: resolvedSong.artwork } : {}),
+        ...(resolvedSong.duration ? { duration: resolvedSong.duration / 1000 } : {}),
+      };
+      await TrackPlayer.add(track);
+      await TrackPlayer.play();
+
       currentIndexRef.current = index;
       setCurrentIndex(index);
-      setState(prev => ({
-        ...prev,
-        currentSong: song,
-        currentIndex: index,
-        isPlaying: false,
-        isLoading: false,
-        position: 0,
-        duration: 0,
-      }));
-      return;
+      setCurrentSong(resolvedSong);
+    } finally {
+      if (thisLoadId === loadIdRef.current) setIsLoading(false);
     }
-
-    setState(prev => ({ ...prev, isLoading: true, isPlaying: false }));
-
-    const { sound } = await Audio.Sound.createAsync(
-      { uri: song.uri },
-      { shouldPlay: true },
-      (status) => onStatusUpdateRef.current?.(status)
-    );
-
-    // A newer tap came in while we were fetching — discard this sound
-    if (thisLoadId !== loadIdRef.current) {
-      try { await sound.unloadAsync(); } catch { /* already gone */ }
-      return;
-    }
-
-    soundRef.current = sound;
-    currentIndexRef.current = index;
-    setCurrentIndex(index);
-
-    setState(prev => ({
-      ...prev,
-      currentSong: song,
-      currentIndex: index,
-      isPlaying: true,
-      isLoading: false,
-    }));
   }, []);
 
   const playNext = useCallback(async (): Promise<void> => {
     const list = songsRef.current;
     if (list.length === 0) return;
-    // Repeat one: always replay current song
     if (repeatModeRef.current === 'one') {
-      const current = list[currentIndexRef.current];
-      if (current) { await loadSong(current, currentIndexRef.current); return; }
+      const cur = list[currentIndexRef.current];
+      if (cur) { await loadSong(cur, currentIndexRef.current); return; }
     }
-    // Shuffle: pick random (not current)
     let nextIndex: number;
     if (isShuffleRef.current && list.length > 1) {
       do { nextIndex = Math.floor(Math.random() * list.length); }
@@ -143,21 +127,17 @@ export function useAudioPlayer(songs: Song[]): AudioPlayerReturn {
     } else {
       nextIndex = (currentIndexRef.current + 1) % list.length;
     }
-    // Repeat all: wraps around naturally via % (already handled above)
-    // Repeat off: stop at end of list
     if (repeatModeRef.current === 'off' && nextIndex === 0 && !isShuffleRef.current) return;
-    const nextSong = list[nextIndex];
-    if (!nextSong) return;
-    await loadSong(nextSong, nextIndex);
+    const next = list[nextIndex];
+    if (next) await loadSong(next, nextIndex);
   }, [loadSong]);
 
   const playPrev = useCallback(async (): Promise<void> => {
     const list = songsRef.current;
     if (list.length === 0) return;
-    // Repeat one: replay current song
     if (repeatModeRef.current === 'one') {
-      const current = list[currentIndexRef.current];
-      if (current) { await loadSong(current, currentIndexRef.current); return; }
+      const cur = list[currentIndexRef.current];
+      if (cur) { await loadSong(cur, currentIndexRef.current); return; }
     }
     let prevIndex: number;
     if (isShuffleRef.current && list.length > 1) {
@@ -166,55 +146,53 @@ export function useAudioPlayer(songs: Song[]): AudioPlayerReturn {
     } else {
       prevIndex = (currentIndexRef.current - 1 + list.length) % list.length;
     }
-    const prevSong = list[prevIndex];
-    if (!prevSong) return;
-    await loadSong(prevSong, prevIndex);
+    const prev = list[prevIndex];
+    if (prev) await loadSong(prev, prevIndex);
   }, [loadSong]);
 
-  // Assign the real handler to the ref after playNext/playPrev are defined
-  onStatusUpdateRef.current = (status: AVPlaybackStatus): void => {
-    if (!status.isLoaded) return;
+  // Auto-advance when track ends
+  useTrackPlayerEvents([Event.PlaybackQueueEnded], () => {
+    void playNext();
+  });
 
-    setState(prev => ({
-      ...prev,
-      position: status.positionMillis,
-      duration: status.durationMillis ?? 0,
-      isPlaying: status.isPlaying,
-    }));
-
-    if (status.didJustFinish) {
-      void playNext();
-    }
-  };
+  // Sync repeat mode with TrackPlayer
+  useEffect(() => {
+    const rnMode = repeatMode === 'one' ? RepeatMode.Track : RepeatMode.Off;
+    void TrackPlayer.setRepeatMode(rnMode);
+  }, [repeatMode]);
 
   const play = useCallback(async (song: Song, index: number): Promise<void> => {
     await loadSong(song, index);
   }, [loadSong]);
 
   const pause = useCallback(async (): Promise<void> => {
-    await soundRef.current?.pauseAsync();
-    setState(prev => ({ ...prev, isPlaying: false }));
+    await TrackPlayer.pause();
   }, []);
 
   const togglePlayPause = useCallback(async (): Promise<void> => {
-    if (!soundRef.current) return;
-    const status = await soundRef.current.getStatusAsync();
-    if (!status.isLoaded) return;
-
-    if (status.isPlaying) {
-      await soundRef.current.pauseAsync();
+    if (isPlaying) {
+      await TrackPlayer.pause();
     } else {
-      await soundRef.current.playAsync();
+      await TrackPlayer.play();
     }
-  }, []);
+  }, [isPlaying]);
 
   const seekTo = useCallback(async (positionMillis: number): Promise<void> => {
-    await soundRef.current?.setPositionAsync(positionMillis);
+    await TrackPlayer.seekTo(positionMillis / 1000);
+  }, []);
+
+  const toggleShuffle = useCallback(() => setIsShuffle(prev => !prev), []);
+  const toggleRepeat = useCallback(() => {
+    setRepeatMode(prev => prev === 'off' ? 'all' : prev === 'all' ? 'one' : 'off');
   }, []);
 
   return {
-    ...state,
+    currentSong,
     currentIndex,
+    isPlaying,
+    position,
+    duration,
+    isLoading,
     play,
     pause,
     togglePlayPause,

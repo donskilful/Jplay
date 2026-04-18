@@ -44,7 +44,7 @@ function toSong(item: YouTubeSearchItem): Song {
     album: 'YouTube',
     genre: 'YouTube',
     uri: item.id.videoId,
-    source: 'youtube',
+    source: 'stream',
     youtubeVideoId: item.id.videoId,
   };
   if (thumb) song.artwork = thumb;

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Song, PlayerContextValue } from '../types';
 import { useAudioPlayer } from '../hooks/useAudioPlayer';
@@ -27,7 +27,6 @@ async function save(key: string, value: unknown): Promise<void> {
   }
 }
 
-
 const PlayerContext = createContext<PlayerContextValue | undefined>(undefined);
 
 interface PlayerProviderProps {
@@ -41,30 +40,6 @@ export function PlayerProvider({ children }: PlayerProviderProps): React.JSX.Ele
   const [downloads, setDownloads] = useState<string[]>([]);
   const [recentlyPlayed, setRecentlyPlayed] = useState<Song[]>([]);
   const [hydrated, setHydrated] = useState(false);
-  const [ytPlaying, setYtPlaying] = useState(false);
-  const [audioOnly, setAudioOnly] = useState(false);
-  const [ytPosition, setYtPosition] = useState(0);
-  const [ytDuration, setYtDuration] = useState(0);
-  const ytSeekRef = useRef<((seconds: number) => void) | null>(null);
-  const ytSeekTo = useCallback((seconds: number): void => {
-    ytSeekRef.current?.(seconds);
-  }, []);
-  const registerYtSeek = useCallback((fn: ((seconds: number) => void) | null): void => {
-    ytSeekRef.current = fn;
-  }, []);
-
-  const ytPlayRef = useRef<(() => void) | null>(null);
-  const ytPauseRef = useRef<(() => void) | null>(null);
-  const ytPlayVideo = useCallback((): void => {
-    ytPlayRef.current?.();
-  }, []);
-  const ytPauseVideo = useCallback((): void => {
-    ytPauseRef.current?.();
-  }, []);
-  const registerYtPlayPause = useCallback((playFn: (() => void) | null, pauseFn: (() => void) | null): void => {
-    ytPlayRef.current = playFn;
-    ytPauseRef.current = pauseFn;
-  }, []);
 
   // Load persisted data on first mount
   useEffect(() => {
@@ -77,13 +52,13 @@ export function PlayerProvider({ children }: PlayerProviderProps): React.JSX.Ele
       ]);
       setFavorites(savedFavorites);
       setFavoriteSongs(savedFavSongs);
+      // Only restore local files — stream URLs expire
       setSongs(savedSongs.filter(s => s.source === 'local' || s.source === undefined));
       setRecentlyPlayed(savedRecent);
       setHydrated(true);
     })();
   }, []);
 
-  // Persist whenever state changes (after hydration to avoid overwriting with defaults)
   useEffect(() => {
     if (!hydrated) return;
     void save(STORAGE_KEYS.favorites, favorites);
@@ -96,7 +71,6 @@ export function PlayerProvider({ children }: PlayerProviderProps): React.JSX.Ele
 
   useEffect(() => {
     if (!hydrated) return;
-    // Only save local imported songs, not streamed ones
     void save(STORAGE_KEYS.songs, songs.filter(s => s.source === 'local' || s.source === undefined));
   }, [songs, hydrated]);
 
@@ -107,19 +81,6 @@ export function PlayerProvider({ children }: PlayerProviderProps): React.JSX.Ele
 
   const player = useAudioPlayer(songs);
   const { play: playerPlay } = player;
-
-  // When the song changes via playNext/playPrev (which bypass wrappedPlay),
-  // sync ytPlaying so YouTube songs always autoplay and non-YouTube clears the flag.
-  useEffect(() => {
-    const song = player.currentSong;
-    if (!song) return;
-    setYtPlaying(song.source === 'youtube');
-    // Default to video mode so the iframe is visible and autoplay is reliable.
-    setAudioOnly(false);
-    setYtPosition(0);
-    setYtDuration(0);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [player.currentSong?.id]);
 
   const toggleFavorite = useCallback((song: Song): void => {
     setFavorites(prev => {
@@ -133,21 +94,15 @@ export function PlayerProvider({ children }: PlayerProviderProps): React.JSX.Ele
     });
   }, []);
 
-  const isFavorite = useCallback((id: string): boolean => {
-    return favorites.includes(id);
-  }, [favorites]);
+  const isFavorite = useCallback((id: string): boolean => favorites.includes(id), [favorites]);
 
   const addDownload = useCallback((id: string): void => {
     setDownloads(prev => prev.includes(id) ? prev : [...prev, id]);
   }, []);
 
-  const isDownloaded = useCallback((id: string): boolean => {
-    return downloads.includes(id);
-  }, [downloads]);
+  const isDownloaded = useCallback((id: string): boolean => downloads.includes(id), [downloads]);
 
   const wrappedPlay = useCallback(async (song: Song, index: number): Promise<void> => {
-    // Autoplay YouTube songs immediately; clear state for non-YouTube
-    setYtPlaying(song.source === 'youtube');
     await playerPlay(song, index);
     setRecentlyPlayed(prev => [song, ...prev.filter(s => s.id !== song.id)].slice(0, 10));
   }, [playerPlay]);
@@ -165,19 +120,6 @@ export function PlayerProvider({ children }: PlayerProviderProps): React.JSX.Ele
     isDownloaded,
     ...player,
     play: wrappedPlay,
-    ytPlaying,
-    setYtPlaying,
-    audioOnly,
-    setAudioOnly,
-    ytPosition,
-    setYtPosition,
-    ytDuration,
-    setYtDuration,
-    ytSeekTo,
-    registerYtSeek,
-    ytPlayVideo,
-    ytPauseVideo,
-    registerYtPlayPause,
   };
 
   return (

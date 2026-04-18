@@ -86,10 +86,9 @@ export default function SearchScreen(): React.JSX.Element {
     const updatedSongs = toAdd.length > 0 ? [...songs, ...toAdd] : songs;
     if (toAdd.length > 0) setSongs(updatedSongs);
     const index = updatedSongs.findIndex(s => s.id === song.id);
+    setQuery('');
     await play(song, index >= 0 ? index : 0);
-    // YouTube songs are played via the iframe in the player screen.
-    // Without navigating there the iframe stays 1×1 px and iOS blocks autoplay.
-    if (song.source === 'youtube') {
+    if (song.source === 'stream') {
       router.push('/player');
     }
   }, [songs, setSongs, play, localResults, youtubeResults]);

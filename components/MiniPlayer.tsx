@@ -79,21 +79,9 @@ export default function MiniPlayer(): React.JSX.Element | null {
     currentSong, isPlaying, position, duration,
     playNext, playPrev, togglePlayPause,
     isShuffle, repeatMode, toggleShuffle, toggleRepeat,
-    ytPlaying, setYtPlaying, ytPosition, ytDuration,
   } = usePlayerContext();
 
-  const isYouTube = currentSong?.source === 'youtube';
-  const displayIsPlaying = isYouTube ? ytPlaying : isPlaying;
-  const displayPosition = isYouTube ? ytPosition * 1000 : position;
-  const displayDuration = isYouTube ? ytDuration * 1000 : duration;
-
-  const handlePlayPause = (): void => {
-    if (isYouTube) {
-      setYtPlaying(prev => !prev);
-    } else {
-      void togglePlayPause();
-    }
-  };
+  const handlePlayPause = (): void => { void togglePlayPause(); };
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const tabBarBottom = TAB_BAR_HEIGHT + insets.bottom;
@@ -102,7 +90,7 @@ export default function MiniPlayer(): React.JSX.Element | null {
   const pathname = usePathname();
   if (!currentSong || pathname === '/player') return null;
 
-  const progress = displayDuration > 0 ? displayPosition / displayDuration : 0;
+  const progress = duration > 0 ? position / duration : 0;
 
   return (
     <View style={styles.wrapper}>
@@ -145,7 +133,7 @@ export default function MiniPlayer(): React.JSX.Element | null {
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.playBtn} onPress={handlePlayPause}>
-              <Ionicons name={displayIsPlaying ? 'pause' : 'play'} size={18} color="#000" />
+              <Ionicons name={isPlaying ? 'pause' : 'play'} size={18} color="#000" />
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.btn} onPress={() => void playNext()} hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}>

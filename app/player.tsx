@@ -167,15 +167,6 @@ export default function PlayerScreen(): React.JSX.Element {
     repeatMode,
     toggleShuffle,
     toggleRepeat,
-    ytPlaying,
-    setYtPlaying,
-    audioOnly,
-    setAudioOnly,
-    ytPosition,
-    ytDuration,
-    ytSeekTo,
-    ytPlayVideo,
-    ytPauseVideo,
   } = usePlayerContext();
 
   const styles = React.useMemo(() => makeStyles(colors, colors.accent), [colors]);
@@ -184,26 +175,9 @@ export default function PlayerScreen(): React.JSX.Element {
   const [showOptions, setShowOptions] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
 
-  const isYouTube = currentSong?.source === 'youtube';
-
   const handlePlayPause = useCallback(async (): Promise<void> => {
-    if (isYouTube) {
-      if (ytPlaying) {
-        ytPauseVideo();
-        setYtPlaying(false);
-      } else {
-        ytPlayVideo();
-        setYtPlaying(true);
-      }
-    } else {
-      await togglePlayPause();
-    }
-  }, [isYouTube, ytPlaying, setYtPlaying, ytPlayVideo, ytPauseVideo, togglePlayPause]);
-
-  const displayIsPlaying = isYouTube ? ytPlaying : isPlaying;
-  // YouTube position/duration come in seconds; slider/formatTime expect milliseconds
-  const displayPosition = isYouTube ? ytPosition * 1000 : position;
-  const displayDuration = isYouTube ? ytDuration * 1000 : duration;
+    await togglePlayPause();
+  }, [togglePlayPause]);
 
   const upNext = songs.slice(currentIndex + 1);
   const liked = currentSong ? isFavorite(currentSong.id) : false;
@@ -331,55 +305,20 @@ export default function PlayerScreen(): React.JSX.Element {
           </TouchableOpacity>
         </View>
 
-        {/* ── Artwork / YouTube placeholder ── */}
-        {isYouTube ? (
-          // Transparent placeholder — the actual iframe renders in _layout.tsx
-          // on top of this exact position so it appears seamlessly embedded.
-          <View style={styles.youtubeWrapper}>
-            {audioOnly && (
-              <View style={styles.audioOnlyOverlay}>
-                {currentSong.artwork
-                  ? <Image source={{ uri: currentSong.artwork }} style={StyleSheet.absoluteFillObject} blurRadius={8} />
-                  : null}
-                <View style={[StyleSheet.absoluteFillObject, { backgroundColor: 'rgba(0,0,0,0.55)' }]} />
-                <Ionicons name="musical-note" size={64} color={colors.accent} />
-                <Text style={styles.audioOnlyText}>Audio Only</Text>
-              </View>
-            )}
-          </View>
-        ) : (
-          <View style={styles.artworkContainer}>
-            {currentSong.artwork ? (
-              <Image
-                source={{ uri: currentSong.artwork }}
-                style={styles.artwork}
-                accessibilityLabel={`Album art for ${currentSong.title}`}
-              />
-            ) : (
-              <View style={styles.artworkPlaceholder}>
-                <Ionicons name="musical-note" size={80} color={colors.accent} />
-              </View>
-            )}
-          </View>
-        )}
-
-        {/* ── Audio / Video toggle (YouTube only) ── */}
-        {isYouTube && (
-          <TouchableOpacity
-            style={styles.audioToggleBtn}
-            onPress={() => setAudioOnly(prev => !prev)}
-            accessibilityLabel={audioOnly ? 'Switch to video' : 'Switch to audio only'}
-          >
-            <Ionicons
-              name={audioOnly ? 'videocam-outline' : 'headset-outline'}
-              size={14}
-              color={colors.textSecondary}
+        {/* ── Artwork ── */}
+        <View style={styles.artworkContainer}>
+          {currentSong.artwork ? (
+            <Image
+              source={{ uri: currentSong.artwork }}
+              style={styles.artwork}
+              accessibilityLabel={`Album art for ${currentSong.title}`}
             />
-            <Text style={styles.audioToggleText}>
-              {audioOnly ? 'Switch to Video' : 'Audio Only'}
-            </Text>
-          </TouchableOpacity>
-        )}
+          ) : (
+            <View style={styles.artworkPlaceholder}>
+              <Ionicons name="musical-note" size={80} color={colors.accent} />
+            </View>
+          )}
+        </View>
 
         {/* ── Song Info + Actions ── */}
         <View style={styles.infoRow}>
@@ -400,25 +339,27 @@ export default function PlayerScreen(): React.JSX.Element {
             </TouchableOpacity>
 
             {/* Download */}
-            <TouchableOpacity
-              style={styles.actionBtn}
-              onPress={() => void handleDownload()}
-              disabled={downloaded || isDownloading}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              accessibilityLabel={downloaded ? 'Downloaded' : 'Download song'}
-            >
-              <Ionicons
-                name={
-                  (downloaded
-                    ? 'checkmark-circle'
-                    : isDownloading
-                    ? 'hourglass'
-                    : 'arrow-down-circle-outline') as IoniconsName
-                }
-                size={20}
-                color={downloaded ? colors.accent : colors.textSecondary}
-              />
-            </TouchableOpacity>
+            {!downloaded && (
+              <TouchableOpacity
+                style={styles.actionBtn}
+                onPress={() => void handleDownload()}
+                disabled={downloaded || isDownloading}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityLabel={downloaded ? 'Downloaded' : 'Download song'}
+              >
+                <Ionicons
+                  name={
+                    (downloaded
+                      ? 'checkmark-circle'
+                      : isDownloading
+                      ? 'hourglass'
+                      : 'arrow-down-circle-outline') as IoniconsName
+                  }
+                  size={20}
+                  color={downloaded ? colors.accent : colors.textSecondary}
+                />
+              </TouchableOpacity>
+            )}
 
             {/* Like */}
             <TouchableOpacity
@@ -441,17 +382,17 @@ export default function PlayerScreen(): React.JSX.Element {
           <Slider
             style={styles.slider}
             minimumValue={0}
-            maximumValue={displayDuration > 0 ? displayDuration : 1}
-            value={displayPosition}
-            onSlidingComplete={isYouTube ? (ms: number) => { ytSeekTo(ms / 1000); } : seekTo}
+            maximumValue={duration > 0 ? duration : 1}
+            value={position}
+            onSlidingComplete={seekTo}
             minimumTrackTintColor={colors.accent}
             maximumTrackTintColor={colors.border}
             thumbTintColor={colors.accent}
             accessibilityLabel="Song progress"
           />
           <View style={styles.timeRow}>
-            <Text style={styles.time}>{formatTime(displayPosition)}</Text>
-            <Text style={styles.time}>{formatTime(displayDuration)}</Text>
+            <Text style={styles.time}>{formatTime(position)}</Text>
+            <Text style={styles.time}>{formatTime(duration)}</Text>
           </View>
         </View>
 
@@ -484,11 +425,11 @@ export default function PlayerScreen(): React.JSX.Element {
           <TouchableOpacity
             onPress={() => void handlePlayPause()}
             style={styles.playBtn}
-            disabled={!isYouTube && isLoading}
-            accessibilityLabel={displayIsPlaying ? 'Pause' : 'Play'}
+            disabled={isLoading}
+            accessibilityLabel={isPlaying ? 'Pause' : 'Play'}
           >
             <Ionicons
-              name={(!isYouTube && isLoading ? 'hourglass' : displayIsPlaying ? 'pause' : 'play') as IoniconsName}
+              name={(isLoading ? 'hourglass' : isPlaying ? 'pause' : 'play') as IoniconsName}
               size={32}
               color={colors.bg}
             />

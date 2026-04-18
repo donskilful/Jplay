@@ -7,9 +7,7 @@ export interface Song {
   uri: string;
   duration?: number;
   artwork?: string;
-  /** Where this song came from */
-  source?: 'local' | 'youtube';
-  /** YouTube video ID — only set when source === 'youtube' */
+  source?: 'local' | 'stream';
   youtubeVideoId?: string;
 }
 
@@ -43,25 +41,4 @@ export interface PlayerContextValue extends PlaybackState {
   repeatMode: 'off' | 'all' | 'one';
   toggleShuffle: () => void;
   toggleRepeat: () => void;
-  /** YouTube-specific: whether the YouTube iframe should be playing */
-  ytPlaying: boolean;
-  setYtPlaying: React.Dispatch<React.SetStateAction<boolean>>;
-  /** Whether the YouTube player is in audio-only mode (video hidden) */
-  audioOnly: boolean;
-  setAudioOnly: React.Dispatch<React.SetStateAction<boolean>>;
-  /** YouTube playback position in seconds (polled from player) */
-  ytPosition: number;
-  setYtPosition: React.Dispatch<React.SetStateAction<number>>;
-  /** YouTube track duration in seconds (polled from player) */
-  ytDuration: number;
-  setYtDuration: React.Dispatch<React.SetStateAction<number>>;
-  /** Seek YouTube player to a position in seconds */
-  ytSeekTo: (seconds: number) => void;
-  /** Register the actual YouTube seek implementation (called from _layout) */
-  registerYtSeek: (fn: ((seconds: number) => void) | null) => void;
-  /** Directly call playVideo/pauseVideo via injectJavaScript (bypasses postMessage) */
-  ytPlayVideo: () => void;
-  ytPauseVideo: () => void;
-  /** Register the actual play/pause implementations (called from _layout) */
-  registerYtPlayPause: (playFn: (() => void) | null, pauseFn: (() => void) | null) => void;
 }

@@ -71,5 +71,16 @@ target 'jplay' do
         end
       end
     end
+
+    # Fix EXConstants script failure on Xcode 26 beta (PROJECT_DIR not set)
+    installer.pods_project.targets.each do |target|
+      if target.name == 'EXConstants'
+        target.build_phases.each do |phase|
+          if phase.respond_to?(:shell_script) && phase.shell_script.include?('get-app-config-ios.sh')
+            phase.shell_script = "PROJECT_DIR=${PROJECT_DIR:-\"$PODS_ROOT/..\"}  #{phase.shell_script}"
+          end
+        end
+      end
+    end
   end
 end
